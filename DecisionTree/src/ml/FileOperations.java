@@ -17,7 +17,7 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 public class FileOperations {
 	
 	private static String filePath = 
-		"/Users/Darshan/Documents/MachineLearningAlgorithms/DecisionTree/src/data";
+		"C:\\Users\\dpatel\\Documents\\MachineLearningAlgorithms\\DecisionTree\\src\\data";
 	private static String trainFile = "housing_train.txt";
 	private static String testFile = "housing_test.txt";
 	
@@ -144,10 +144,20 @@ public class FileOperations {
 		
 	}
 	
-	public Object calculateMSE(Feature feature,Object featureValue){
+	/**
+	 * This method will find the best fitted criteria value for the given feature.
+	 * 
+	 * The best fitted criteria will be decided based on the variance in the split data
+	 * set.
+	 * 
+	 * @param feature
+	 * @return
+	 */
+	public Object findBestSplitFeatureCriVal(Feature feature){
 		
 		
 		Path trainFilepath = Paths.get(filePath,trainFile);
+		
 		ArrayList<ArrayList<Float>> leftSideLabelValPerFeatureCrt = 
 				new ArrayList<ArrayList<Float>>(((ArrayList)feature.getValues()).size());
 		ArrayList<ArrayList<Float>> rightSideLabelValPerFeatureCrt = 
@@ -155,14 +165,23 @@ public class FileOperations {
 		
 		ArrayList<ArrayList<Integer>> leftSideDataPoint = new ArrayList<ArrayList<Integer>>();
 		ArrayList<ArrayList<Integer>> rightSideDataPoint = new ArrayList<ArrayList<Integer>>();
-		int count = 0;
+		
+		Integer count = 0;
 		try{
 			try(Stream<String> lines = Files.lines(trainFilepath)){
 			lines.forEach(s -> splitByFeature(s,feature,leftSideLabelValPerFeatureCrt,
 					rightSideLabelValPerFeatureCrt,
 					count,leftSideDataPoint,rightSideDataPoint));
-		}
+			}
 			
+		
+			Integer criteriaIndex = findBestFeatureSplit(feature, leftSideLabelValPerFeatureCrt, 
+					rightSideLabelValPerFeatureCrt);
+			
+			System.out.println("Feature value : " + feature.getName());
+			System.out.println("Feature Index : " + feature.getIndex());
+			System.out.println("Feature criteria index : " + criteriaIndex);
+			System.out.println("Feature criteria value : " + ((ArrayList)feature.getValues()).get(criteriaIndex));
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -172,28 +191,55 @@ public class FileOperations {
 		
 	}
 	
+	/**
+	 * This method find the feature criteria value, which has the less variance for the 
+	 * predicted dataset label values.
+	 * @param feature
+	 * @param leftSideLabelValPerFeatureCrt
+	 * @param rightSideLabelValPerFeatureCrt
+	 * @return
+	 */
 	public Integer findBestFeatureSplit(Feature feature,
 			ArrayList<ArrayList<Float>> leftSideLabelValPerFeatureCrt, 
 			ArrayList<ArrayList<Float>> rightSideLabelValPerFeatureCrt){
 			
 		ArrayList<Float> criteriaVariance = new ArrayList<Float>();
 		
+		
+		//System.out.println(((ArrayList)feature.getValues()).size());
+		
 		for(int i =0 ; i < ((ArrayList)feature.getValues()).size() ; i++){
 			
-			ArrayList<Float> leftSideLabelValue = leftSideLabelValPerFeatureCrt.get(i);
-			ArrayList<Float> rightSideLabelValue = rightSideLabelValPerFeatureCrt.get(i);
-			
 			// Calculate the variance of label values
-			Float totalVariance = calculateVariance(leftSideLabelValue) + 
-					calculateVariance(rightSideLabelValue);
+			Float leftSideLabelVariance = (float) 0.0;
+			if(i < leftSideLabelValPerFeatureCrt.size()){
+				ArrayList<Float> leftSideLabelValue = leftSideLabelValPerFeatureCrt.get(i);
+				leftSideLabelVariance = calculateVariance(leftSideLabelValue);
+				leftSideLabelValue.clear();
+			}
+			
+			Float rightSideLabelVariance = (float)0.0;
+			if(i < rightSideLabelValPerFeatureCrt.size()){
+				ArrayList<Float> rightSideLabelValue = rightSideLabelValPerFeatureCrt.get(i);
+				calculateVariance(rightSideLabelValue);
+				rightSideLabelValue.clear();
+			}
+			
+			Float totalVariance = leftSideLabelVariance + rightSideLabelVariance;
 			criteriaVariance.add(totalVariance);
-			leftSideLabelValue.clear();
-			rightSideLabelValue.clear();
+			
 		}
 		
-		return 0;
+		// Return the index of element from criteriaVariance which has lowest variance.
+		
+		return criteriaVariance.indexOf(Collections.min(criteriaVariance));
 	}
 	
+	/**
+	 * This method calculate the variance of the given ArrayList
+	 * @param values
+	 * @return
+	 */
 	public Float calculateVariance(ArrayList<Float> values){
 		
 		DescriptiveStatistics descriptiveStatistics = new DescriptiveStatistics();
@@ -203,50 +249,102 @@ public class FileOperations {
 		
 	}
 	
+	/**
+	 * This method parse the datapoint (line) and compare the value of feature
+	 * with various feature criteria points. Based upon the comparision it divides 
+	 * the dataset into two parts.
+	 * @param line
+	 * @param feature
+	 * @param leftSideLabelValPerFeatureCrt
+	 * @param rightSideLabelValPerFeatureCrt
+	 * @param count
+	 * @param leftSideDataPoint
+	 * @param rightSideDataPoint
+	 */
 	public void splitByFeature(String line,Feature feature,
 			ArrayList<ArrayList<Float>> leftSideLabelValPerFeatureCrt,
-			ArrayList<ArrayList<Float>> rightSideLabelValPerFeatureCrt,int count,
+			ArrayList<ArrayList<Float>> rightSideLabelValPerFeatureCrt,Integer count,
 			ArrayList<ArrayList<Integer>> leftSideDataPoint,
 			ArrayList<ArrayList<Integer>> rightSideDataPoint){
 		
 		String parts[] = line.trim().split("\\s+");
 		//System.out.println(parts.length);
 		Integer featureIndex = feature.getIndex();
+		
 		if(feature.getType().equals(Constant.NUMERIC)){
 			
 			ArrayList<Float> values = (ArrayList)feature.getValues();
-			for(int i= 0 ; i< values.size();i++){
+			
+			for(int i= 0 ; i < values.size();i++){
+				
 				Float trainDataValue = Float.parseFloat(parts[featureIndex]);
-				if(trainDataValue < values.get(featureIndex)){
-					if(leftSideLabelValPerFeatureCrt.get(featureIndex) != null){
-						leftSideLabelValPerFeatureCrt.get(featureIndex).add(trainDataValue);
-						leftSideDataPoint.get(featureIndex).add(count);
+				if(trainDataValue < values.get(i)){
+					if(i < leftSideLabelValPerFeatureCrt.size()){
+						leftSideLabelValPerFeatureCrt.get(i).add(trainDataValue);
+						leftSideDataPoint.get(i).add(1);
 					}else{
 						ArrayList<Float> trainDataValues = new ArrayList<Float>();
 						trainDataValues.add(trainDataValue);
-						leftSideLabelValPerFeatureCrt.set(featureIndex,trainDataValues);
+						leftSideLabelValPerFeatureCrt.add(trainDataValues);
 						ArrayList<Integer> dataPoints = new ArrayList<Integer>();
-						dataPoints.add(count);
-						leftSideDataPoint.set(featureIndex, dataPoints);
+						dataPoints.add(1);
+						leftSideDataPoint.add(dataPoints);
 					}
 						
 				}else{
 					
-					if(rightSideLabelValPerFeatureCrt.get(featureIndex) != null){
-						rightSideLabelValPerFeatureCrt.get(featureIndex).add(trainDataValue);
-						rightSideDataPoint.get(featureIndex).add(count);
+					if(i < rightSideLabelValPerFeatureCrt.size()){
+						rightSideLabelValPerFeatureCrt.get(i).add(trainDataValue);
+						rightSideDataPoint.get(i).add(0);
 					}else{
 						ArrayList<Float> trainDataValues = new ArrayList<Float>();
 						trainDataValues.add(trainDataValue);
-						rightSideLabelValPerFeatureCrt.set(featureIndex,trainDataValues);
+						rightSideLabelValPerFeatureCrt.add(trainDataValues);
 						ArrayList<Integer> dataPoints = new ArrayList<Integer>();
-						dataPoints.add(count);
-						rightSideDataPoint.set(featureIndex, dataPoints);
+						dataPoints.add(0);
+						rightSideDataPoint.add(dataPoints);
 					}
-					
 				}
 				
 			}
+		}else if(feature.getType().equals(Constant.BINARY_NUM)){
+			
+			ArrayList<Float> values = (ArrayList)feature.getValues();
+			
+			for(int i= 0 ; i< values.size();i++){
+				
+				Float trainDataValue = Float.parseFloat(parts[featureIndex]);
+				if(trainDataValue == values.get(i)){
+					if(i < leftSideLabelValPerFeatureCrt.size()){
+						leftSideLabelValPerFeatureCrt.get(i).add(trainDataValue);
+						leftSideDataPoint.get(i).add(count);
+					}else{
+						ArrayList<Float> trainDataValues = new ArrayList<Float>();
+						trainDataValues.add(trainDataValue);
+						leftSideLabelValPerFeatureCrt.add(trainDataValues);
+						ArrayList<Integer> dataPoints = new ArrayList<Integer>();
+						dataPoints.add(1);
+						leftSideDataPoint.add(dataPoints);
+					}
+						
+				}else{
+					
+					if(i < rightSideLabelValPerFeatureCrt.size()){
+						rightSideLabelValPerFeatureCrt.get(i).add(trainDataValue);
+						rightSideDataPoint.get(i).add(count);
+					}else{
+						ArrayList<Float> trainDataValues = new ArrayList<Float>();
+						trainDataValues.add(trainDataValue);
+						rightSideLabelValPerFeatureCrt.add(trainDataValues);
+						ArrayList<Integer> dataPoints = new ArrayList<Integer>();
+						dataPoints.add(0);
+						rightSideDataPoint.add(dataPoints);
+					}
+				}
+				
+				
+			}
+			
 		}
 		count++;
 	}
@@ -257,6 +355,10 @@ public class FileOperations {
 		FileOperations fileOperations = new FileOperations();
 		ArrayList<Feature> features = fileOperations.fetchFeaturePossCriValues(filePath,trainFile);
 		fileOperations.printFeatureValues(features);
+		
+		for(Feature feature : features){
+			fileOperations.findBestSplitFeatureCriVal(feature);
+		}
 		
 	}
 
