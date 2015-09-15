@@ -1,46 +1,66 @@
 package ml;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 
 public class Node {
 
-	String featureName;
-	Float criteriaValue;
-	String condition;
-	Float labelValue;
-	ArrayList<Node> childNodes;
+	HashMap<Integer,Boolean> dataPoints;
+	Feature feature;
+	Boolean isLeaf;
+	Double criteriaValue;
+	Double labelValue;
+	Double variance;
+	Node leftChildNode;  // A node which satisfies the criteria value
+	Node rightChildNode; // A node which does not satisfy the criteria value
 	Node parentNode;
 	
-	
-	public String getFeatureName() {
-		return featureName;
+	public HashMap<Integer, Boolean> getDataPoints() {
+		return dataPoints;
 	}
-	public void setFeatureName(String featureName) {
-		this.featureName = featureName;
+	public void setDataPoints(HashMap<Integer, Boolean> dataPoints) {
+		this.dataPoints = dataPoints;
 	}
-	public Float getCriteriaValue() {
+	public Feature getFeature() {
+		return feature;
+	}
+	public void setFeature(Feature feature) {
+		this.feature = feature;
+	}
+	public Boolean getIsLeaf() {
+		return isLeaf;
+	}
+	public void setIsLeaf(Boolean isLeaf) {
+		this.isLeaf = isLeaf;
+	}
+	public Double getCriteriaValue() {
 		return criteriaValue;
 	}
-	public void setCriteriaValue(Float criteriaValue) {
+	public void setCriteriaValue(Double criteriaValue) {
 		this.criteriaValue = criteriaValue;
 	}
-	public String getCondition() {
-		return condition;
-	}
-	public void setCondition(String condition) {
-		this.condition = condition;
-	}
-	public Float getLabelValue() {
+	public Double getLabelValue() {
 		return labelValue;
 	}
-	public void setLabelValue(Float labelValue) {
+	public void setLabelValue(Double labelValue) {
 		this.labelValue = labelValue;
 	}
-	public ArrayList<Node> getChildNodes() {
-		return childNodes;
+	public Double getVariance() {
+		return variance;
 	}
-	public void setChildNodes(ArrayList<Node> childNodes) {
-		this.childNodes = childNodes;
+	public void setVariance(Double variance) {
+		this.variance = variance;
+	}
+	public Node getLeftChildNode() {
+		return leftChildNode;
+	}
+	public void setLeftChildNode(Node leftChildNode) {
+		this.leftChildNode = leftChildNode;
+	}
+	public Node getRightChildNode() {
+		return rightChildNode;
+	}
+	public void setRightChildNode(Node rightChildNode) {
+		this.rightChildNode = rightChildNode;
 	}
 	public Node getParentNode() {
 		return parentNode;
@@ -48,5 +68,7 @@ public class Node {
 	public void setParentNode(Node parentNode) {
 		this.parentNode = parentNode;
 	}
+	
+	
 	
 }
