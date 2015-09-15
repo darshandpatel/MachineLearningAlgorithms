@@ -1,7 +1,12 @@
 package ml;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.stream.IntStream;
+
+import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
+import com.sun.xml.internal.fastinfoset.util.ContiguousCharArrayArray;
 
 public class Node {
 
@@ -70,6 +75,13 @@ public class Node {
 		this.parentNode = parentNode;
 	}
 	
-	
+	public void setDataPoints(Integer totalLines){
+		
+		dataPoints = new ArrayList<Integer>(totalLines);
+		for(int i=1;i<=totalLines;i++){
+			dataPoints.add(i);
+		}
+		
+	}
 	
 }

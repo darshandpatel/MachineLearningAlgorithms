@@ -358,14 +358,22 @@ public class FileOperations {
 	 * values as byte position of that line in the file.
 	 * @return
 	 */
-	public HashMap<Integer,Double> getBytePosOfLine(){
+	public HashMap<Integer,Double> getBytePosOfLine(String fileCategory){
 		
 		HashMap<Integer,Double> bytesByLine = new HashMap<Integer,Double>();
 		Integer lineCount = 1;
 		Double startByteCount = 0d;
+		String targetFileName;
+		
+		if(fileCategory.equals(Constant.TRAIN)){
+			targetFileName = trainFile;
+		}else{
+			targetFileName = testFile;
+		}
+		
 		try{
 			
-			Path trainFilepath = Paths.get(filePath,trainFile);
+			Path trainFilepath = Paths.get(filePath,targetFileName);
 			try(Stream<String> lines = Files.lines(trainFilepath)){
 				
 				Iterator<String> lineIterator = lines.iterator();
@@ -388,6 +396,10 @@ public class FileOperations {
 		
 	}
 	
+	/**
+	 * 
+	 * @return RandomAccessFile object of training dataset file.
+	 */
 	public RandomAccessFile getRandomAccessTrainFile(){
 		
 		try {
@@ -414,7 +426,7 @@ public class FileOperations {
 		}
 		*/
 		FileOperations fileOperations = new FileOperations();
-		fileOperations.getBytePosOfLine();
+		fileOperations.getBytePosOfLine(Constant.TRAIN);
 		
 	}
 

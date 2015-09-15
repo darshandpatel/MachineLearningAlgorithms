@@ -4,33 +4,50 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Queue;
 
 public class BasicRegressionTree {
 	
+	Queue<Node> nodeQueue;
+	
 	ArrayList<Feature> features;
 	LinkedList<Feature> selectedFeature = new LinkedList<Feature>();
+	FileOperations fileOperations;
+	HashMap<Integer,Double> bytesForTrainDataSetLines;
+	Integer depthLimit = 2;
 	
-	public Node featureSelection(){
+	public BasicRegressionTree(){
 		
-		for(Feature feature : features){
-			
-			if(feature.getType().equals(Constant.NUMERIC)){
-				
-				for(Float value : (ArrayList<Float>) feature.getValues()){
-					
-					// Pass the feature name, index and its value to FileOperation method
-				}
-				
-			}
-				
-				
-			
-		}
+		// Create node queue
+		nodeQueue = new LinkedList<Node>();
 		
+		// Create the mapping of DataPoint and its start byte code from the file 
+		fileOperations =  new FileOperations();
+		bytesForTrainDataSetLines = fileOperations.getBytePosOfLine(Constant.TRAIN);
 		
-		return null;
+		// Create the root node for Regression Tree and add into Queue
+		Node rootNode = new Node();
+		rootNode.setDataPoints(bytesForTrainDataSetLines.size());
+		nodeQueue.add(rootNode);
+				
 	}
 	
 	
-
+	public void formRegressionTree(){
+		
+		
+		Integer exploredNodeCount = 0;
+		Integer exploredNodeLimit = (1 + (int)Math.pow(2, depthLimit));
+		
+		// Form the tree until Node queue is not empty and the # of explored node 
+		// is less the # of explored node limit
+		while( (nodeQueue.size() > 0) && (exploredNodeCount < exploredNodeLimit)){
+			
+			Node currentNode = nodeQueue.poll();
+			
+			
+		}
+		
+	}
+	
 }
