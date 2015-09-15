@@ -28,6 +28,7 @@ public class BasicRegressionTree {
 		// Create the root node for Regression Tree and add into Queue
 		Node rootNode = new Node();
 		rootNode.setDataPoints(bytesForTrainDataSetLines.size());
+		rootNode.setVariance(0d);
 		nodeQueue.add(rootNode);
 				
 	}

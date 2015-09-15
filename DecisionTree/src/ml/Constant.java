@@ -15,6 +15,11 @@ public class Constant {
 	public static String BINARY_NUM = "BINARY-NUM";
 	public static String BINARY_CAT = "BINARY-CAT";
 	
+	public static String FILE_PATH = 
+			"C:\\Users\\dpatel\\Documents\\MachineLearningAlgorithms\\DecisionTree\\src\\data\\";
+	public static String TRAINDATA_FILE = "housing_train.txt";
+	public static String TESTDATA_FILE = "housing_test.txt";
+	
 	public static ArrayList<String> featureTypes = new ArrayList<String>(
 			Arrays.asList(CATEGORICAL,NUMERIC,BINARY_NUM,BINARY_CAT));
 }

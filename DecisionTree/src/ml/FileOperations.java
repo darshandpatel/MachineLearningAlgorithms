@@ -20,13 +20,10 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
  */
 public class FileOperations {
 	
-	private static String filePath = 
-		"C:\\Users\\dpatel\\Documents\\MachineLearningAlgorithms\\DecisionTree\\src\\data\\";
-	private static String trainFile = "housing_train.txt";
-	private static String testFile = "housing_test.txt";
 	
 	//HashMap<String,ArrayList<Float>> featureValues = new HashMap<String,ArrayList<Float>>();
 	//ArrayList<Float> labels = new ArrayList<Float>();
+	
 	
 	/**
 	 * 
@@ -160,7 +157,7 @@ public class FileOperations {
 	public Object findBestSplitFeatureCriVal(Feature feature){
 		
 		
-		Path trainFilepath = Paths.get(filePath,trainFile);
+		Path trainFilepath = Paths.get(Constant.FILE_PATH,Constant.TRAINDATA_FILE);
 		
 		ArrayList<ArrayList<Float>> leftSideLabelValPerFeatureCrt = 
 				new ArrayList<ArrayList<Float>>(((ArrayList)feature.getValues()).size());
@@ -366,14 +363,14 @@ public class FileOperations {
 		String targetFileName;
 		
 		if(fileCategory.equals(Constant.TRAIN)){
-			targetFileName = trainFile;
+			targetFileName = Constant.TRAINDATA_FILE;
 		}else{
-			targetFileName = testFile;
+			targetFileName = Constant.TESTDATA_FILE;
 		}
 		
 		try{
 			
-			Path trainFilepath = Paths.get(filePath,targetFileName);
+			Path trainFilepath = Paths.get(Constant.FILE_PATH,targetFileName);
 			try(Stream<String> lines = Files.lines(trainFilepath)){
 				
 				Iterator<String> lineIterator = lines.iterator();
@@ -403,7 +400,7 @@ public class FileOperations {
 	public RandomAccessFile getRandomAccessTrainFile(){
 		
 		try {
-			RandomAccessFile raf = new RandomAccessFile(filePath+trainFile, "r");
+			RandomAccessFile raf = new RandomAccessFile(Constant.FILE_PATH+Constant.TRAINDATA_FILE, "r");
 			return raf;
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -418,7 +415,7 @@ public class FileOperations {
 		
 		/*
 		FileOperations fileOperations = new FileOperations();
-		ArrayList<Feature> features = fileOperations.fetchFeaturePossCriValues(filePath,trainFile);
+		ArrayList<Feature> features = fileOperations.fetchFeaturePossCriValues(Constant.FILE_PATH,trainFile);
 		fileOperations.printFeatureValues(features);
 		
 		for(Feature feature : features){
