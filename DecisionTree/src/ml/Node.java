@@ -1,10 +1,11 @@
 package ml;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Node {
 
-	HashMap<Integer,Boolean> dataPoints;
+	ArrayList<Integer> dataPoints;
 	Feature feature;
 	Boolean isLeaf;
 	Double criteriaValue;
@@ -14,10 +15,10 @@ public class Node {
 	Node rightChildNode; // A node which does not satisfy the criteria value
 	Node parentNode;
 	
-	public HashMap<Integer, Boolean> getDataPoints() {
+	public ArrayList<Integer> getDataPoints() {
 		return dataPoints;
 	}
-	public void setDataPoints(HashMap<Integer, Boolean> dataPoints) {
+	public void setDataPoints(ArrayList<Integer> dataPoints) {
 		this.dataPoints = dataPoints;
 	}
 	public Feature getFeature() {
