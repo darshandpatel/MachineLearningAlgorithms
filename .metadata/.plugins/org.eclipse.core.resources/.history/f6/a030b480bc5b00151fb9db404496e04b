@@ -402,6 +402,23 @@ public class FileOperations {
 	}
 	
 	
+	public String getLineByBytecode(RandomAccessFile raf, Long byteCode){
+		
+		try {
+			raf.seek(byteCode);
+			String line = raf.readLine();
+			System.out.println(line);
+			return line;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+		
+		
+	}
+	
+	
 	public static void main(String args[]){
 		
 		/*
@@ -415,6 +432,8 @@ public class FileOperations {
 		*/
 		FileOperations fileOperations = new FileOperations();
 		fileOperations.getBytePosOfLine();
+		fileOperations.getLineByBytecode(fileOperations.getRandomAccessTrainFile(), 42336l);
+		fileOperations.getLineByBytecode(fileOperations.getRandomAccessTrainFile(), 98l);
 		
 	}
 

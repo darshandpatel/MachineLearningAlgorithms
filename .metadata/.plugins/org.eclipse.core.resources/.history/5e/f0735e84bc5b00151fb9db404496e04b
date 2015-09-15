@@ -415,6 +415,8 @@ public class FileOperations {
 		*/
 		FileOperations fileOperations = new FileOperations();
 		fileOperations.getBytePosOfLine();
+		fileOperations.getLineByBytecode(fileOperations.getRandomAccessTrainFile(), 42336l);
+		fileOperations.getLineByBytecode(fileOperations.getRandomAccessTrainFile(), 98l);
 		
 	}
 
