@@ -6,7 +6,7 @@ public class Feature {
 	
 	String name;
 	String type;
-	Object values;
+	ArrayList<Double> values;
 	Integer index;
 	
 	
@@ -29,10 +29,10 @@ public class Feature {
 	public void setType(String type) {
 		this.type = type;
 	}
-	public Object getValues() {
+	public ArrayList<Double> getValues() {
 		return values;
 	}
-	public void setValues(Object values) {
+	public void setValues(ArrayList<Double> values) {
 		this.values = values;
 	}
 

@@ -22,6 +22,7 @@ public class Constant {
 	
 	public static Integer NUM_OF_FEATURES = 13;
 	public static Integer NUM_OF_TRAINING_DATAPOINTS = 433;
+	public static Integer TARGET_VALUE_INDEX = 13;
 	
 	public static ArrayList<String> featureTypes = new ArrayList<String>(
 			Arrays.asList(CATEGORICAL,NUMERIC,BINARY_NUM,BINARY_CAT));
