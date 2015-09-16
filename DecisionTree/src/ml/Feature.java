@@ -10,7 +10,7 @@ public class Feature {
 	Integer index;
 	
 	
-	public Feature(String name,String type, ArrayList<Float> values,Integer index){
+	public Feature(String name,String type, ArrayList<Double> values,Integer index){
 		this.name = name;
 		this.type = type;
 		this.values = values;
