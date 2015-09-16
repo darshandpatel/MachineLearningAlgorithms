@@ -11,7 +11,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.stream.Stream;
+
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+
+import Jama.Matrix;
 
 /**
  * This class contains all the methods related to read/write operation of the DataSet.
@@ -19,7 +22,7 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
  *
  */
 public class FileOperations {
-	
+
 	
 	//HashMap<String,ArrayList<Float>> featureValues = new HashMap<String,ArrayList<Float>>();
 	//ArrayList<Float> labels = new ArrayList<Float>();
@@ -351,63 +354,34 @@ public class FileOperations {
 	}
 	
 	/**
-	 * This method will return the HashMap with key as line number and
-	 * values as byte position of that line in the file.
-	 * @return
+	 * 
+	 * @return The matrix which rows represent the datapoints (line in the file)
+	 *  and which columns represent the feature values. 
 	 */
-	public HashMap<Integer,Double> getBytePosOfLine(String fileCategory){
+	public Matrix fetchDataPoints(){
 		
-		HashMap<Integer,Double> bytesByLine = new HashMap<Integer,Double>();
-		Integer lineCount = 1;
-		Double startByteCount = 0d;
-		String targetFileName;
-		
-		if(fileCategory.equals(Constant.TRAIN)){
-			targetFileName = Constant.TRAINDATA_FILE;
-		}else{
-			targetFileName = Constant.TESTDATA_FILE;
-		}
-		
+		double dataPoints[][] = new double
+				[Constant.NUM_OF_TRAINING_DATAPOINTS][Constant.NUM_OF_FEATURES];
 		try{
 			
-			Path trainFilepath = Paths.get(Constant.FILE_PATH,targetFileName);
+			Path trainFilepath = Paths.get(Constant.FILE_PATH,Constant.TRAINDATA_FILE);
+			Integer lineCounter = 0;
 			try(Stream<String> lines = Files.lines(trainFilepath)){
-				
 				Iterator<String> lineIterator = lines.iterator();
 				while(lineIterator.hasNext()){
-					
 					String line = lineIterator.next();
-					bytesByLine.put(lineCount, startByteCount);
-					System.out.println("Line number :"+lineCount+" Start byte is : "+startByteCount);
-					startByteCount += (line.length()+2);
-					lineCount += 1;
-					
+					String parts[] = line.trim().split("\\s+");
+					for(int i=0;i<(parts.length-1);i++){
+						dataPoints[lineCounter][i] = Double.parseDouble(parts[i]);
+					}
+					lineCounter++;
 				}
 			}
 			
-		}catch(IOException ex){
-			System.out.println(ex.getMessage());
+		}catch(IOException e){
+			System.out.println(e.getMessage());
 		}
-
-		return bytesByLine;
-		
-	}
-	
-	/**
-	 * 
-	 * @return RandomAccessFile object of training dataset file.
-	 */
-	public RandomAccessFile getRandomAccessTrainFile(){
-		
-		try {
-			RandomAccessFile raf = new RandomAccessFile(Constant.FILE_PATH+Constant.TRAINDATA_FILE, "r");
-			return raf;
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return null;
-		
+		return new Matrix(dataPoints);
 	}
 	
 	
@@ -423,7 +397,8 @@ public class FileOperations {
 		}
 		*/
 		FileOperations fileOperations = new FileOperations();
-		fileOperations.getBytePosOfLine(Constant.TRAIN);
+		System.out.println(fileOperations.fetchDataPoints().getColumnDimension());
+		System.out.println(fileOperations.fetchDataPoints().getRowDimension());
 		
 	}
 

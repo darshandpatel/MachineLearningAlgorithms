@@ -6,6 +6,8 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 
+import Jama.Matrix;
+
 public class BasicRegressionTree {
 	
 	Queue<Node> nodeQueue;
@@ -13,7 +15,7 @@ public class BasicRegressionTree {
 	ArrayList<Feature> features;
 	LinkedList<Feature> selectedFeature = new LinkedList<Feature>();
 	FileOperations fileOperations;
-	HashMap<Integer,Double> bytesForTrainDataSetLines;
+	Matrix dataPoints;
 	Integer depthLimit = 2;
 	
 	public BasicRegressionTree(){
@@ -23,11 +25,11 @@ public class BasicRegressionTree {
 		
 		// Create the mapping of DataPoint and its start byte code from the file 
 		fileOperations =  new FileOperations();
-		bytesForTrainDataSetLines = fileOperations.getBytePosOfLine(Constant.TRAIN);
+		dataPoints =  fileOperations.fetchDataPoints();
 		
 		// Create the root node for Regression Tree and add into Queue
 		Node rootNode = new Node();
-		rootNode.setDataPoints(bytesForTrainDataSetLines.size());
+		rootNode.setDataPoints(dataPoints.getRowDimension());
 		rootNode.setVariance(0d);
 		nodeQueue.add(rootNode);
 				
