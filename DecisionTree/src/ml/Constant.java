@@ -7,6 +7,7 @@ public class Constant {
 	
 	public static ArrayList<String> features = new ArrayList<String>(
 			Arrays.asList("CRIM","ZN","INDUS","CHAS","NOX","RM","AGE","DIS","RAD","TAX","PTRATIO","B","LSTAT"));
+	public static Integer NO_OF_FEATURES = features.size();
 	
 	public static String TRAIN = "TRAIN";
 	public static String TEST = "TEST";
@@ -26,4 +27,7 @@ public class Constant {
 	
 	public static ArrayList<String> featureTypes = new ArrayList<String>(
 			Arrays.asList(CATEGORICAL,NUMERIC,BINARY_NUM,BINARY_CAT));
+	
+	public static Double INFO_GAIN_THRESHOLD = 1d;
+	public static Double VARIANCE_THRESHOLD = 5d;
 }
