@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
 
@@ -157,23 +156,23 @@ public class BasicRegressionTree {
 		
 		Double parentNodeVariance = node.getVariance();
 		
-		ArrayList<Double> infoGainPerFeatureBestThreshold = new ArrayList<Double>();
-		ArrayList<Integer> bestThresholdIndexPerFeature = new ArrayList<Integer>();
+		HashMap<Integer,Double> infoGainPerFeatureBestThreshold = new HashMap<Integer,Double>();
+		HashMap<Integer,Integer> bestThresholdIndexPerFeature = new HashMap<Integer,Integer>();
 		
 		HashMap<Integer,ArrayList<Integer>> leftSideDPForFeaturesBestThreshold = 
 				new HashMap<Integer,ArrayList<Integer>>();
 		HashMap<Integer,ArrayList<Integer>> rightSideDPForFeatureBestThreshold = 
 				new HashMap<Integer,ArrayList<Integer>>();
 		
-		ArrayList<Double> leftSideVarianceForFeaturesBestThreshold = 
-				new ArrayList<Double>();
-		ArrayList<Double> rightSideVarianceForFeatureBestThreshold = 
-				new ArrayList<Double>();
+		HashMap<Integer,Double> leftSideVarianceForFeaturesBestThreshold = 
+				new HashMap<Integer,Double>();
+		HashMap<Integer,Double> rightSideVarianceForFeatureBestThreshold = 
+				new HashMap<Integer,Double>();
 		
 		
 		for(Feature feature : features){
 			
-			System.out.println("*********************FEATURE STARTS************");
+			System.out.println("*********************FEATURE STARTS********************");
 			
 			HashMap<Integer,ArrayList<Integer>> leftSideDPPerThreshold = 
 					new HashMap<Integer,ArrayList<Integer>>();
@@ -181,6 +180,7 @@ public class BasicRegressionTree {
 					new HashMap<Integer,ArrayList<Integer>>();
 			
 			Integer NoOfDataPoints = dataMatrix.getRowDimension();
+			int featureIndex = feature.getIndex();
 
 			ArrayList<Double> values = feature.getValues();
 			int noOfThresholdValues = values.size();
@@ -270,24 +270,37 @@ public class BasicRegressionTree {
 			
 			
 			Double lowestLabelVariance = Collections.min(totalLabelVariance);
+			
 			Integer bestThresholdIndex = totalLabelVariance.indexOf(lowestLabelVariance);
+			System.out.println("Lowest label variance     "+lowestLabelVariance);
 			
+			bestThresholdIndexPerFeature.put(featureIndex,bestThresholdIndex);
 			
-			bestThresholdIndexPerFeature.add(bestThresholdIndex);
 			Double infoGain = parentNodeVariance - lowestLabelVariance;
-			infoGainPerFeatureBestThreshold.add(infoGain);
+			infoGainPerFeatureBestThreshold.put(featureIndex,infoGain);
 			
-			System.out.println("# of threshold values 	: "+ feature.getValues().size());
-			System.out.println("Information Gain		: " +infoGain);
-			System.out.println("Feature index 			: " +feature.getIndex());
-			System.out.println("Feature type 			: " +feature.getType());
-			System.out.println("Threshold value index 	: " +bestThresholdIndex);
+			System.out.println("# of threshold values 	: " + values.size());
+			System.out.println("Information Gain		: " + infoGain);
+			System.out.println("Feature index 			: " + featureIndex);
+			System.out.println("Feature type 			: " + feature.getType());
+			System.out.println("Threshold value index 	: " + bestThresholdIndex);
+			System.out.println("Threshold value 		: " + values.get(bestThresholdIndex));
 			
-			leftSideDPForFeaturesBestThreshold.put(feature.getIndex(),leftSideDPPerThreshold.get(bestThresholdIndex));
-			rightSideDPForFeatureBestThreshold.put(feature.getIndex(),rightSideDPPerThreshold.get(bestThresholdIndex));
+			if(leftSideDPPerThreshold.get(bestThresholdIndex) != null){
+				System.out.println("# of datapoint on left side: "+leftSideDPPerThreshold.get(bestThresholdIndex).size());
+				leftSideDPForFeaturesBestThreshold.put(featureIndex,leftSideDPPerThreshold.get(bestThresholdIndex));
+			}
+			if(rightSideDPPerThreshold.get(bestThresholdIndex) != null){
+				System.out.println("# of datapoint on right side: "+rightSideDPPerThreshold.get(bestThresholdIndex).size());
+				rightSideDPForFeatureBestThreshold.put(featureIndex,rightSideDPPerThreshold.get(bestThresholdIndex));
+			}
 			
-			leftSideVarianceForFeaturesBestThreshold.add(leftSideLabelVariances.get(bestThresholdIndex));
-			rightSideVarianceForFeatureBestThreshold.add(rightSideLabelVariances.get(bestThresholdIndex));
+			leftSideVarianceForFeaturesBestThreshold.put(featureIndex,leftSideLabelVariances.get(bestThresholdIndex));
+			System.out.println("Left side variance				: "+leftSideLabelVariances.get(bestThresholdIndex));
+			rightSideVarianceForFeatureBestThreshold.put(featureIndex,rightSideLabelVariances.get(bestThresholdIndex));
+			System.out.println("Right side variance				: "+rightSideLabelVariances.get(bestThresholdIndex));
+			
+			System.out.println("Total variance is				: "+totalLabelVariance.get(bestThresholdIndex));
 		}
 		
 		System.out.println("*********************ALL FEATURES SCANNED************");
@@ -297,8 +310,8 @@ public class BasicRegressionTree {
 		
 		System.out.println("Best Feature index is	: "+ bestFeatureIndex);
 		Integer bestThresholdValueIndex = bestThresholdIndexPerFeature.get(bestFeatureIndex);
-		System.out.println("Left : " + leftSideDPForFeaturesBestThreshold.get(bestThresholdValueIndex).size());
-		System.out.println("Right : "+rightSideDPForFeatureBestThreshold.get(bestThresholdValueIndex).size());
+		System.out.println("Left : " + leftSideDPForFeaturesBestThreshold.get(bestFeatureIndex).size());
+		System.out.println("Right : "+rightSideDPForFeatureBestThreshold.get(bestFeatureIndex).size());
 		node.setThresholdValue(features.get(bestFeatureIndex).getValues().get(bestThresholdValueIndex));
 		
 		if(higherstInfoGain > Constant.INFO_GAIN_THRESHOLD){
@@ -369,11 +382,16 @@ public class BasicRegressionTree {
 	 */
 	public Double calculateVariance(ArrayList<Integer> dataPoints){
 		
-		DescriptiveStatistics descriptiveStatistics = new DescriptiveStatistics();
-		for(Integer row : dataPoints){
-			descriptiveStatistics.addValue(dataMatrix.get(row, Constant.TARGET_VALUE_INDEX));
+		if(dataPoints.size() > 0){
+			DescriptiveStatistics descriptiveStatistics = new DescriptiveStatistics();
+			for(Integer row : dataPoints){
+				descriptiveStatistics.addValue(dataMatrix.get(row, Constant.TARGET_VALUE_INDEX));
+			}
+			return descriptiveStatistics.getVariance();
+		}else{
+			return 0d;
 		}
-		return descriptiveStatistics.getVariance();
+		
 	}
 	
 	/**

@@ -274,22 +274,4 @@ public class FileOperations {
 		return new Matrix(dataPoints);
 	}
 	
-	
-	public static void main(String args[]){
-		
-		/*
-		FileOperations fileOperations = new FileOperations();
-		ArrayList<Feature> features = fileOperations.fetchFeaturePossCriValues(Constant.FILE_PATH,trainFile);
-		fileOperations.printFeatureValues(features);
-		
-		for(Feature feature : features){
-			fileOperations.findBestSplitFeatureCriVal(feature);
-		}
-		*/
-		FileOperations fileOperations = new FileOperations();
-		System.out.println(fileOperations.fetchDataPoints().getColumnDimension());
-		System.out.println(fileOperations.fetchDataPoints().getRowDimension());
-		
-	}
-
 }
