@@ -8,11 +8,11 @@ public class Node {
 	ArrayList<Integer> dataPoints;
 	Feature feature;
 	Boolean isLeaf;
-	Double criteriaValue;
+	Double thresholdValue;
 	Double labelValue;
 	Double variance;
-	Node leftChildNode;  // A node which satisfies the criteria value
-	Node rightChildNode; // A node which does not satisfy the criteria value
+	Node leftChildNode;  // A node which satisfies the threshold value
+	Node rightChildNode; // A node which does not satisfy the threshold value
 	Node parentNode;
 	
 	public ArrayList<Integer> getDataPoints() {
@@ -33,11 +33,11 @@ public class Node {
 	public void setIsLeaf(Boolean isLeaf) {
 		this.isLeaf = isLeaf;
 	}
-	public Double getCriteriaValue() {
-		return criteriaValue;
+	public Double getThresholdValue() {
+		return thresholdValue;
 	}
-	public void setCriteriaValue(Double criteriaValue) {
-		this.criteriaValue = criteriaValue;
+	public void setThresholdValue(Double thresholdValue) {
+		this.thresholdValue = thresholdValue;
 	}
 	public Double getLabelValue() {
 		return labelValue;
@@ -73,7 +73,7 @@ public class Node {
 	public void setDataPoints(Integer totalLines){
 		
 		dataPoints = new ArrayList<Integer>(totalLines);
-		for(int i=1;i<=totalLines;i++){
+		for(int i=0;i<totalLines;i++){
 			dataPoints.add(i);
 		}
 		
