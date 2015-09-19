@@ -10,7 +10,7 @@ public class Node {
 	Boolean isLeaf;
 	Double thresholdValue;
 	Double labelValue;
-	Double variance;
+	Double MSE;
 	Node leftChildNode;  // A node which satisfies the threshold value
 	Node rightChildNode; // A node which does not satisfy the threshold value
 	Node parentNode;
@@ -45,11 +45,11 @@ public class Node {
 	public void setLabelValue(Double labelValue) {
 		this.labelValue = labelValue;
 	}
-	public Double getVariance() {
-		return variance;
+	public Double getMSE() {
+		return MSE;
 	}
-	public void setVariance(Double variance) {
-		this.variance = variance;
+	public void setMSE(Double mSE) {
+		MSE = mSE;
 	}
 	public Node getLeftChildNode() {
 		return leftChildNode;
@@ -76,7 +76,6 @@ public class Node {
 		for(int i=0;i<totalLines;i++){
 			dataPoints.add(i);
 		}
-		
 	}
 	
 }

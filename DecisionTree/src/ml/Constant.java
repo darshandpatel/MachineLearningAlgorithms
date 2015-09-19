@@ -17,18 +17,18 @@ public class Constant {
 	public static String BINARY_CAT = "BINARY-CAT";
 	
 	public static String FILE_PATH = 
-			"C:\\Users\\dpatel\\Documents\\MachineLearningAlgorithms\\DecisionTree\\src\\data";
-	public static String TRAINDATA_FILE = "housing_train_small.txt";
+			"/Users/Darshan/Documents/MachineLearningAlgorithms/DecisionTree/src/data";
+	public static String TRAINDATA_FILE = "housing_train.txt";
 	public static String TESTDATA_FILE = "housing_test.txt";
 	
 	public static Integer NUM_OF_FEATURES = 13;
-	//public static Integer NUM_OF_TRAINING_DATAPOINTS = 433;
-	public static Integer NUM_OF_TRAINING_DATAPOINTS = 15;
+	public static Integer NUM_OF_TRAINING_DATAPOINTS = 433;
+	//public static Integer NUM_OF_TRAINING_DATAPOINTS = 15;
 	public static Integer TARGET_VALUE_INDEX = 13;
 	
 	public static ArrayList<String> featureTypes = new ArrayList<String>(
 			Arrays.asList(CATEGORICAL,NUMERIC,BINARY_NUM,BINARY_CAT));
 	
 	public static Double INFO_GAIN_THRESHOLD = 1d;
-	public static Double VARIANCE_THRESHOLD = 5d;
+	public static Double VARIANCE_THRESHOLD = 1d;
 }

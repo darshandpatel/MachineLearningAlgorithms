@@ -22,6 +22,14 @@ public class BasicRegressionTree {
 	Matrix dataMatrix;
 	Integer depthLimit = 15;
 	
+	/**
+	 * 
+	 * @return The Root node of Regression Tree
+	 */
+	Node getRootNode(){
+		return rootNode;
+	}
+	
 	public BasicRegressionTree(){
 		
 		// Create node queue
@@ -35,8 +43,8 @@ public class BasicRegressionTree {
 		// Create the root node for Regression Tree and add into Queue
 		Node rootNode = new Node();
 		rootNode.setDataPoints(dataMatrix.getRowDimension());
-		rootNode.setVariance(calculateVariance(dataMatrix));
-		System.out.println("Root node variance is : "+ rootNode.getVariance());
+		rootNode.setMSE(calculateVariance(dataMatrix));
+		
 		nodeQueue.add(rootNode);
 		this.rootNode = rootNode;
 		
@@ -54,6 +62,9 @@ public class BasicRegressionTree {
 			
 			Node currentNode = nodeQueue.poll();
 			
+			System.out.println("Parent node variance is : "+ currentNode.getMSE());
+			
+			System.out.println("Parent node Data Points are:"+currentNode.getDataPoints().size());
 			splitNodeByFeaturethreshold(currentNode);
 			currentNode.getDataPoints().clear();
 			
@@ -154,7 +165,7 @@ public class BasicRegressionTree {
 	
 	public void splitNodeByFeaturethreshold(Node node){
 		
-		Double parentNodeVariance = node.getVariance();
+		Double parentNodeMSE = node.getMSE();
 		
 		HashMap<Integer,Double> infoGainPerFeatureBestThreshold = new HashMap<Integer,Double>();
 		HashMap<Integer,Integer> bestThresholdIndexPerFeature = new HashMap<Integer,Integer>();
@@ -164,11 +175,12 @@ public class BasicRegressionTree {
 		HashMap<Integer,ArrayList<Integer>> rightSideDPForFeatureBestThreshold = 
 				new HashMap<Integer,ArrayList<Integer>>();
 		
-		HashMap<Integer,Double> leftSideVarianceForFeaturesBestThreshold = 
+		HashMap<Integer,Double> leftSideVarianceForFeatureBestThreshold = 
 				new HashMap<Integer,Double>();
 		HashMap<Integer,Double> rightSideVarianceForFeatureBestThreshold = 
 				new HashMap<Integer,Double>();
 		
+		ArrayList<Integer> currentNodeDataPoints = node.getDataPoints();
 		
 		for(Feature feature : features){
 			
@@ -179,28 +191,28 @@ public class BasicRegressionTree {
 			HashMap<Integer,ArrayList<Integer>> rightSideDPPerThreshold = 
 					new HashMap<Integer,ArrayList<Integer>>();
 			
-			Integer NoOfDataPoints = dataMatrix.getRowDimension();
+			Integer NoOfCurrentNodeDataPoints = currentNodeDataPoints.size();
 			int featureIndex = feature.getIndex();
 
 			ArrayList<Double> values = feature.getValues();
 			int noOfThresholdValues = values.size();
 			
-			for(int row = 0 ; row < NoOfDataPoints ; row++){
+			if(feature.getType().equals(Constant.NUMERIC)){
 				
-				Double trainFeatureValue = dataMatrix.get(row,feature.getIndex());
-				
-				if(feature.getType().equals(Constant.NUMERIC)){
+				for(int i= 0 ; i < noOfThresholdValues;i++){
 					
-					for(int i= 0 ; i < noOfThresholdValues;i++){
+					for(int k = 0 ; k < NoOfCurrentNodeDataPoints ; k++){
+					
+						Double trainFeatureValue = dataMatrix.get(k,featureIndex);
 						
 						if(trainFeatureValue < values.get(i)){
 							
 							if(leftSideDPPerThreshold.containsKey(i)){
 								//System.out.println("Index : "+i+" , size is : "+leftSideDPPerThreshold.get(i).size());
-								leftSideDPPerThreshold.get(i).add(row);
+								leftSideDPPerThreshold.get(i).add(k);
 							}else{
 								ArrayList<Integer> dataPoints = new ArrayList<Integer>();
-								dataPoints.add(row);
+								dataPoints.add(k);
 								leftSideDPPerThreshold.put(i,dataPoints);
 							}
 								
@@ -208,37 +220,43 @@ public class BasicRegressionTree {
 							
 							if(rightSideDPPerThreshold.containsKey(i)){
 								//System.out.println("Index : "+i+" , size is : "+rightSideDPPerThreshold.get(i).size());
-								rightSideDPPerThreshold.get(i).add(row);
+								rightSideDPPerThreshold.get(i).add(k);
 							}else{
 								ArrayList<Integer> dataPoints = new ArrayList<Integer>();
-								dataPoints.add(row);
+								dataPoints.add(k);
 								rightSideDPPerThreshold.put(i,dataPoints);
 							}
 						}
 						
 					}
-				}else if(feature.getType().equals(Constant.BINARY_NUM)){
+				}
+			}else if(feature.getType().equals(Constant.BINARY_NUM)){
+				
+				for(int i= 0 ; i< noOfThresholdValues;i++){
 					
-					//System.out.println("In side binary");
-					//System.out.println("# of different value "+ noOfThresholdValues);
-					for(int i= 0 ; i< noOfThresholdValues;i++){
-						
-						if(trainFeatureValue == values.get(i)){
+					for(int k = 0 ; k < NoOfCurrentNodeDataPoints ; k++){
+					
+						Double trainFeatureValue = dataMatrix.get(k,featureIndex);
+					
+						//System.out.println("In side binary");
+						//System.out.println("# of different value "+ noOfThresholdValues);
+					
+						if(trainFeatureValue == 0){
 							if(leftSideDPPerThreshold.containsKey(i)){
-								leftSideDPPerThreshold.get(i).add(row);
+								leftSideDPPerThreshold.get(i).add(k);
 							}else{
 								ArrayList<Integer> dataPoints = new ArrayList<Integer>();
-								dataPoints.add(row);
+								dataPoints.add(k);
 								leftSideDPPerThreshold.put(i,dataPoints);
 							}
 								
 						}else{
 							
 							if(rightSideDPPerThreshold.containsKey(i)){
-								rightSideDPPerThreshold.get(i).add(row);
+								rightSideDPPerThreshold.get(i).add(k);
 							}else{
 								ArrayList<Integer> dataPoints = new ArrayList<Integer>();
-								dataPoints.add(row);
+								dataPoints.add(k);
 								rightSideDPPerThreshold.put(i,dataPoints);
 							}
 						}
@@ -247,36 +265,42 @@ public class BasicRegressionTree {
 				}
 			}
 			
+			// Calculation of mean square error (MSE)
+			HashMap<Integer,Double> labelMSEPerThresholdValue = calculateLabelValueMSE(feature,
+					leftSideDPPerThreshold,rightSideDPPerThreshold);
 			
-			HashMap<Integer,Double> leftSideLabelVariances = calculateLabelValueVariance(feature, 
-					leftSideDPPerThreshold);
-			HashMap<Integer,Double> rightSideLabelVariances = calculateLabelValueVariance(feature, 
-					rightSideDPPerThreshold);
 			
-			ArrayList<Double> totalLabelVariance = new ArrayList<Double>();
-			
-			for(int i = 0 ; i< noOfThresholdValues ; i++){
-				
-				double leftSideLabelVariance = 0d;
-				if(leftSideLabelVariances.containsKey(i)){
-					leftSideLabelVariance = leftSideLabelVariances.get(i);
+			Iterator<Entry<Integer, Double>> labelMSEIterator = labelMSEPerThresholdValue.entrySet().iterator();
+			Double minMSE = Double.POSITIVE_INFINITY;
+			Double lowestLabelMSE = Double.POSITIVE_INFINITY;
+			Integer bestThresholdIndex=0;
+			while(labelMSEIterator.hasNext()){
+				Entry<Integer, Double> entry = labelMSEIterator.next();
+				if(entry.getValue() < minMSE){
+					minMSE = entry.getValue();
+					bestThresholdIndex = entry.getKey();
 				}
-				double rightSideLabelVariance = 0d;
-				if(rightSideLabelVariances.containsKey(i)){
-					rightSideLabelVariance = rightSideLabelVariances.get(i);
-				}
-				totalLabelVariance.add(leftSideLabelVariance + rightSideLabelVariance);
 			}
 			
+			if(minMSE != Double.POSITIVE_INFINITY)
+				lowestLabelMSE = minMSE;
 			
-			Double lowestLabelVariance = Collections.min(totalLabelVariance);
+			/**
+			System.out.println("##################");
 			
-			Integer bestThresholdIndex = totalLabelVariance.indexOf(lowestLabelVariance);
-			System.out.println("Lowest label variance     "+lowestLabelVariance);
+			for(int i=0;i<noOfThresholdValues;i++){
+				System.out.print(totalLabelVariance.get(i));
+				if(leftSideDPPerThreshold.get(i) != null)
+					System.out.print(" Left #: "+ leftSideDPPerThreshold.get(i).size());
+				if(rightSideDPPerThreshold.get(i) != null)
+					System.out.print(" Right #: "+rightSideDPPerThreshold.get(i).size());
+				System.out.print("\n");
+			}
+			**/
 			
 			bestThresholdIndexPerFeature.put(featureIndex,bestThresholdIndex);
 			
-			Double infoGain = parentNodeVariance - lowestLabelVariance;
+			Double infoGain = parentNodeMSE - lowestLabelMSE;
 			infoGainPerFeatureBestThreshold.put(featureIndex,infoGain);
 			
 			System.out.println("# of threshold values 	: " + values.size());
@@ -295,20 +319,44 @@ public class BasicRegressionTree {
 				rightSideDPForFeatureBestThreshold.put(featureIndex,rightSideDPPerThreshold.get(bestThresholdIndex));
 			}
 			
-			leftSideVarianceForFeaturesBestThreshold.put(featureIndex,leftSideLabelVariances.get(bestThresholdIndex));
-			System.out.println("Left side variance				: "+leftSideLabelVariances.get(bestThresholdIndex));
-			rightSideVarianceForFeatureBestThreshold.put(featureIndex,rightSideLabelVariances.get(bestThresholdIndex));
-			System.out.println("Right side variance				: "+rightSideLabelVariances.get(bestThresholdIndex));
-			
-			System.out.println("Total variance is				: "+totalLabelVariance.get(bestThresholdIndex));
+			//leftSideVarianceForFeatureBestThreshold.put(featureIndex,leftSideLabelMSE.get(bestThresholdIndex));
+			//System.out.println("Left side variance				: "+leftSideLabelMSE.get(bestThresholdIndex));
+			//rightSideVarianceForFeatureBestThreshold.put(featureIndex,rightSideLabelMSE.get(bestThresholdIndex));
+			//System.out.println("Right side variance				: "+rightSideLabelMSE.get(bestThresholdIndex));
 		}
 		
 		System.out.println("*********************ALL FEATURES SCANNED************");
 		
-		Double higherstInfoGain = Collections.max(infoGainPerFeatureBestThreshold);
-		Integer bestFeatureIndex = infoGainPerFeatureBestThreshold.indexOf(higherstInfoGain);
+		createChildNodes(node, rightSideVarianceForFeatureBestThreshold, leftSideVarianceForFeatureBestThreshold, 
+				infoGainPerFeatureBestThreshold, bestThresholdIndexPerFeature, leftSideDPForFeaturesBestThreshold, 
+				rightSideDPForFeatureBestThreshold);
+	}
+	
+	
+	public void createChildNodes(Node node, HashMap<Integer,Double> rightSideVarianceForFeatureBestThreshold,
+			HashMap<Integer,Double> leftSideVarianceForFeatureBestThreshold,
+			HashMap<Integer,Double> infoGainPerFeatureBestThreshold,
+			HashMap<Integer,Integer> bestThresholdIndexPerFeature,
+			HashMap<Integer,ArrayList<Integer>> leftSideDPForFeaturesBestThreshold,
+			HashMap<Integer,ArrayList<Integer>> rightSideDPForFeatureBestThreshold){
+		
+		Double higherstInfoGain = 0d;
+		Integer bestFeatureIndex = 0;
+		Iterator<Entry<Integer, Double>> infoGainIterator = infoGainPerFeatureBestThreshold.entrySet().iterator();
+		Double maxValue = Double.NEGATIVE_INFINITY;
+		while(infoGainIterator.hasNext()){
+			
+			Entry<Integer, Double> entry = infoGainIterator.next();
+			if(entry.getValue() > maxValue){
+				maxValue = entry.getValue();
+				bestFeatureIndex = entry.getKey();
+			}
+		}
+		if(maxValue != Double.NEGATIVE_INFINITY)
+			higherstInfoGain = maxValue;
 		
 		System.out.println("Best Feature index is	: "+ bestFeatureIndex);
+		System.out.println("Information Gained is	: "+higherstInfoGain);
 		Integer bestThresholdValueIndex = bestThresholdIndexPerFeature.get(bestFeatureIndex);
 		System.out.println("Left : " + leftSideDPForFeaturesBestThreshold.get(bestFeatureIndex).size());
 		System.out.println("Right : "+rightSideDPForFeatureBestThreshold.get(bestFeatureIndex).size());
@@ -322,16 +370,18 @@ public class BasicRegressionTree {
 			
 			System.out.println("Best Threshold value	:" + bestFeature.getValues().get(bestThresholdIndexPerFeature.get(bestFeatureIndex)));
 			
-			if(Constant.VARIANCE_THRESHOLD < leftSideVarianceForFeaturesBestThreshold.get(bestFeatureIndex)){
+			if(Constant.VARIANCE_THRESHOLD < leftSideVarianceForFeatureBestThreshold.get(bestFeatureIndex)){
+				
 				Node leftNode = new Node();
 				System.out.println("Left child # of data points "
 								+leftSideDPForFeaturesBestThreshold.get(bestFeatureIndex).size());
 				leftNode.setDataPoints(leftSideDPForFeaturesBestThreshold.get(bestFeatureIndex));
 				leftNode.setParentNode(node);
-				leftNode.setVariance(leftSideVarianceForFeaturesBestThreshold.get(bestFeatureIndex));
+				leftNode.setMSE(leftSideVarianceForFeatureBestThreshold.get(bestFeatureIndex));
 				System.out.println("Left child variance	 		"
-						+leftSideVarianceForFeaturesBestThreshold.get(bestFeatureIndex));
+						+leftSideVarianceForFeatureBestThreshold.get(bestFeatureIndex));
 				node.setLeftChildNode(leftNode);
+				
 			}
 			
 			
@@ -342,7 +392,7 @@ public class BasicRegressionTree {
 								+rightSideDPForFeatureBestThreshold.get(bestFeatureIndex).size());
 				rightNode.setDataPoints(rightSideDPForFeatureBestThreshold.get(bestFeatureIndex));
 				rightNode.setParentNode(node);
-				rightNode.setVariance(rightSideVarianceForFeatureBestThreshold.get(bestFeatureIndex));
+				rightNode.setMSE(rightSideVarianceForFeatureBestThreshold.get(bestFeatureIndex));
 				System.out.println("Right child variance	 		"
 						+rightSideVarianceForFeatureBestThreshold.get(bestFeatureIndex));
 				
@@ -351,43 +401,85 @@ public class BasicRegressionTree {
 			
 		}
 		
+		node.setLabelValue(calculateAverage(node.getDataPoints()));
+	
 	}
 	
 	
-	public HashMap<Integer,Double> calculateLabelValueVariance(Feature feature, 
-			HashMap<Integer,ArrayList<Integer>> dataPoints){
+
+	public HashMap<Integer,Double> calculateLabelValueMSE(
+			Feature feature,
+			HashMap<Integer,ArrayList<Integer>> leftDataPoints,
+			HashMap<Integer,ArrayList<Integer>> rightDataPoints){
 			
-		HashMap<Integer,Double> variancePerThreshold = new HashMap<Integer,Double>();
+		HashMap<Integer,Double> msePerThreshold = new HashMap<Integer,Double>();
+		ArrayList<Double> thresholdValues = feature.getValues();
+		int featureIndex = feature.getIndex();
 		
+		int noOfThresholdValues = thresholdValues.size();
 		//System.out.println(((ArrayList)feature.getValues()).size());
-		Iterator<Entry<Integer, ArrayList<Integer>>> dataPointIterator = dataPoints.entrySet().iterator();
-		Double labelVariance = 0d;
 		
-		while(dataPointIterator.hasNext()){
+		for(int i =0 ;i<noOfThresholdValues; i++){
 			
-			Entry<Integer, ArrayList<Integer>> entry = dataPointIterator.next();
-			labelVariance = calculateVariance(entry.getValue());
-			variancePerThreshold.put(entry.getKey(), labelVariance);
+			int leftDataPointCount = 0;
+			int rightDataPointCount = 0;
+			Double leftLabelValue = 0d;
+			if(leftDataPoints.containsKey(i)){
+				Double leftLabelValueAvg = calculateAverage(leftDataPoints.get(i));
+				for(Integer index : leftDataPoints.get(i)){
+					leftLabelValue += (dataMatrix.get(index, featureIndex) - leftLabelValueAvg);
+					leftDataPointCount++;
+				}
+			}
+			
+			Double rightLabelValue = 0d;
+			if(rightDataPoints.containsKey(i)){
+				Double rightLabelValueAvg = calculateAverage(rightDataPoints.get(i));
+				for(Integer index : rightDataPoints.get(i)){
+					rightLabelValue += (dataMatrix.get(index, featureIndex) - rightLabelValueAvg);
+					rightDataPointCount++;
+				}
+				
+			}
+			
+			Double MSE = ((leftLabelValue + rightLabelValue) / rightDataPointCount + leftDataPointCount);
+			msePerThreshold.put(i, MSE);
 			
 		}
-
-		return variancePerThreshold;
+		return msePerThreshold;
 	}
+	
 	
 	/**
 	 * This method calculate the variance of the target value for the given 
 	 * dataPoints.
-	 * @param values
+	 * @param values : Data Points label value ArrayList
 	 * @return
 	 */
 	public Double calculateVariance(ArrayList<Integer> dataPoints){
+		
+		DescriptiveStatistics descriptiveStatistics = new DescriptiveStatistics();
+		for(Integer row : dataPoints){
+			descriptiveStatistics.addValue(dataMatrix.get(row, Constant.TARGET_VALUE_INDEX));
+		}
+		
+		return descriptiveStatistics.getStandardDeviation();
+		
+	}
+	
+	/**
+	 * 
+	 * @param dataPoints : The ArrayList of all Data Point's Index (row/line number)
+	 * @return The mean value of all Data Point's label value
+	 */
+	public Double calculateAverage(ArrayList<Integer> dataPoints){
 		
 		if(dataPoints.size() > 0){
 			DescriptiveStatistics descriptiveStatistics = new DescriptiveStatistics();
 			for(Integer row : dataPoints){
 				descriptiveStatistics.addValue(dataMatrix.get(row, Constant.TARGET_VALUE_INDEX));
 			}
-			return descriptiveStatistics.getVariance();
+			return descriptiveStatistics.getMean();
 		}else{
 			return 0d;
 		}
@@ -395,10 +487,10 @@ public class BasicRegressionTree {
 	}
 	
 	/**
-	 * This method calculate the variance of the target value for the given 
-	 * dataPoints.
-	 * @param values
-	 * @return
+	 * 
+	 * @param dataPoints : Matrix of Data Points
+	 * @return The variance of the label value of the given 
+	 * Data Points
 	 */
 	public Double calculateVariance(Matrix dataPoints){
 		
@@ -406,20 +498,20 @@ public class BasicRegressionTree {
 		for(int i=0;i<dataPoints.getRowDimension();i++){
 			descriptiveStatistics.addValue(dataMatrix.get(i,Constant.TARGET_VALUE_INDEX));
 		}
-		return descriptiveStatistics.getVariance();
+		return descriptiveStatistics.getStandardDeviation();
 	}
 	
-	public void printRegressionTree(){
-		
-		System.out.println("Root node :");
-		printRegressionTreeNode(this.rootNode);
-		
-	}
-	
+
+	/**
+	 * This method print the important information of the given Regression Tree
+	 * Node
+	 * @param node : Regression Tree Node
+	 */
 	public void printRegressionTreeNode(Node node){
 		
 		//System.out.println("Feature name: 				" + node.getFeature);
-		System.out.println("Feature Threshold Value: 	" + node.getThresholdValue());
+		System.out.println("Feature Threshold Value: 	: " + node.getThresholdValue());
+		System.out.println("Label Value					: "+node.getLabelValue());
 		
 		if(node.getLeftChildNode() != null){
 			System.out.println("Left child node :");
