@@ -6,14 +6,14 @@ public class Feature {
 	
 	String name;
 	String type;
-	ArrayList<Double> values;
+	ArrayList<Double> thresholdValues;
 	Integer index;
 	
 	
-	public Feature(String name,String type, ArrayList<Double> values,Integer index){
+	public Feature(String name,String type, ArrayList<Double> thresholdValues,Integer index){
 		this.name = name;
 		this.type = type;
-		this.values = values;
+		this.thresholdValues = thresholdValues;
 		this.index = index;
 	}
 	
@@ -29,11 +29,11 @@ public class Feature {
 	public void setType(String type) {
 		this.type = type;
 	}
-	public ArrayList<Double> getValues() {
-		return values;
+	public ArrayList<Double> getThresholdValues() {
+		return thresholdValues;
 	}
-	public void setValues(ArrayList<Double> values) {
-		this.values = values;
+	public void setThresholdValues(ArrayList<Double> thresholdValues) {
+		this.thresholdValues = thresholdValues;
 	}
 
 	public Integer getIndex() {

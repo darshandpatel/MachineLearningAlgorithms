@@ -6,7 +6,6 @@ import java.util.ArrayList;
 public class Node {
 
 	ArrayList<Integer> dataPoints;
-	Feature feature;
 	Boolean isLeaf;
 	Double thresholdValue;
 	Double labelValue;
@@ -15,18 +14,13 @@ public class Node {
 	Node rightChildNode; // A node which does not satisfy the threshold value
 	Node parentNode;
 	Double error;
+	Integer featureIndex;
 	
 	public ArrayList<Integer> getDataPoints() {
 		return dataPoints;
 	}
 	public void setDataPoints(ArrayList<Integer> dataPoints) {
 		this.dataPoints = dataPoints;
-	}
-	public Feature getFeature() {
-		return feature;
-	}
-	public void setFeature(Feature feature) {
-		this.feature = feature;
 	}
 	public Boolean getIsLeaf() {
 		return isLeaf;
@@ -83,6 +77,12 @@ public class Node {
 	}
 	public void setError(Double error) {
 		this.error = error;
+	}
+	public Integer getFeatureIndex() {
+		return featureIndex;
+	}
+	public void setFeatureIndex(Integer featureIndex) {
+		this.featureIndex = featureIndex;
 	}
 	
 }
