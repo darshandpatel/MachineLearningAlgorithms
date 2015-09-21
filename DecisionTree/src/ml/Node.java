@@ -14,6 +14,7 @@ public class Node {
 	Node leftChildNode;  // A node which satisfies the threshold value
 	Node rightChildNode; // A node which does not satisfy the threshold value
 	Node parentNode;
+	Double error;
 	
 	public ArrayList<Integer> getDataPoints() {
 		return dataPoints;
@@ -76,6 +77,12 @@ public class Node {
 		for(int i=0;i<totalLines;i++){
 			dataPoints.add(i);
 		}
+	}
+	public Double getError() {
+		return error;
+	}
+	public void setError(Double error) {
+		this.error = error;
 	}
 	
 }
