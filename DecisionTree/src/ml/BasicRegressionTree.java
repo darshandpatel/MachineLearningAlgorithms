@@ -7,18 +7,23 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map.Entry;
 import java.util.Queue;
+import java.util.concurrent.locks.AbstractQueuedLongSynchronizer.ConditionObject;
 
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 import Jama.Matrix;
 
+/**
+ * 
+ * @author Darshan
+ *
+ */
 public class BasicRegressionTree {
 	
-	Queue<Node> nodeQueue;
-	Node rootNode;
-	LinkedList<Feature> selectedFeature = new LinkedList<Feature>();
-	FileOperations fileOperations;
-	Matrix dataMatrix;
+	private Queue<Node> nodeQueue;
+	private Node rootNode;
+	private FileOperations fileOperations;
+	private Matrix dataMatrix;
 	
 	
 	/**
@@ -40,7 +45,9 @@ public class BasicRegressionTree {
 		
 		// Create the mapping of DataPoint and its start byte code from the file 
 		fileOperations =  new FileOperations();
-		dataMatrix =  fileOperations.fetchTrainingDataPoints();
+		dataMatrix =  fileOperations.fetchDataPointsFromFile(
+				Constant.HOUSING_DATA_FILE_PATH,Constant.HOUSING_TRAINDATA_FILE,
+				Constant.HOUSING_DATA_NUM_OF_TESTING_DP,Constant.HOUSING_DATA_NO_OF_FEATURES);
 		
 		// Create the root node for Regression Tree and add into Queue
 		Node rootNode = new Node();
@@ -59,7 +66,7 @@ public class BasicRegressionTree {
 	public void formRegressionTree(){
 		
 		Integer exploredNodeCount = 0;
-		Integer exploredNodeLimit = (1 + (int)Math.pow(2,Constant.DEPTH_LIMIT));
+		Integer exploredNodeLimit = (1 + (int)Math.pow(2,Constant.HOUSING_DATA_DEPTH_LIMIT));
 		
 		// Form the tree until Node queue is not empty and the # of explored node 
 		// is less the # of explored node limit
@@ -68,7 +75,8 @@ public class BasicRegressionTree {
 			Node currentNode = nodeQueue.poll();
 			exploredNodeCount++;
 			//System.out.println("##############################");
-			//System.out.println("Parent node Data Points are	:"+currentNode.getDataPoints().size());
+			//System.out.println("Parent node Data Points are	:" + 
+			//currentNode.getDataPoints().size());
 			//System.out.println("Parent node error is 		:"+currentNode.getError());
 			
 			splitNodeByBestFeaturethreshold(currentNode);
@@ -76,14 +84,14 @@ public class BasicRegressionTree {
 			if(currentNode.getLeftChildNode() != null){
 				
 				Node leftNode = currentNode.getLeftChildNode();
-				if(leftNode.getError() > Constant.ERROR_THRESHOLD)
+				if(leftNode.getError() > Constant.HOUSING_DATA_ERROR_THRESHOLD)
 					nodeQueue.add(currentNode.getLeftChildNode());
 				
 			}
 			if(currentNode.getRightChildNode() != null){
 				
 				Node rightNode = currentNode.getRightChildNode();
-				if(rightNode.getError() > Constant.ERROR_THRESHOLD)
+				if(rightNode.getError() > Constant.HOUSING_DATA_ERROR_THRESHOLD)
 					nodeQueue.add(currentNode.getRightChildNode());
 				
 			}
@@ -97,12 +105,13 @@ public class BasicRegressionTree {
 	 * @return ArrayList of Feature, Basically this method parse the dataPoints 
 	 * matrix and find the possible threshold value for all the features.
 	 */
-	public ArrayList<Feature> fetchFeaturePosThreshold(Matrix dataMatrix, ArrayList<Integer> dataPoints){
+	public ArrayList<Feature> fetchFeaturePosThreshold(Matrix dataMatrix, 
+			ArrayList<Integer> dataPoints){
 		
 		int noOfColumns = dataMatrix.getColumnDimension();
 		
 		HashMap<Integer,ArrayList<Double>> featurePosThreshold = 
-				new HashMap<Integer,ArrayList<Double>>(Constant.NO_OF_FEATURES);
+				new HashMap<Integer,ArrayList<Double>>(Constant.HOUSING_DATA_NO_OF_FEATURES);
 			
 		for(int i=0; i < (noOfColumns -1);i++){
 			
@@ -131,12 +140,13 @@ public class BasicRegressionTree {
 	}
 	
 	
-	private ArrayList<Feature> createFeatures(HashMap<Integer,ArrayList<Double>> featurePosThreshold){
+	private ArrayList<Feature> createFeatures(HashMap<Integer , 
+			ArrayList<Double>> featurePosThreshold){
 	
 		ArrayList<Feature> features = new ArrayList<Feature>();
-		for(int i = 0; i < Constant.NO_OF_FEATURES;i++){
+		for(int i = 0; i < Constant.HOUSING_DATA_NO_OF_FEATURES;i++){
 			
-			String featureName = Constant.features.get(i);
+			String featureName = Constant.HOUSING_DATA_FEATURUES.get(i);
 			String featureCtg = null;
 			
 			ArrayList<Double> calculatedFeaturePosCriValues = featurePosThreshold.get(i);
@@ -248,7 +258,8 @@ public class BasicRegressionTree {
 						}else{
 							if(rightSideDPPerThreshold.containsKey(i)){
 								//System.out.println("Right side node Threshol value index : "+i+"
-								// Threshold value "+trainFeatureValue+", size is : "+rightSideDPPerThreshold.get(i).size());
+								// Threshold value "+trainFeatureValue+", size is : " + 
+								//rightSideDPPerThreshold.get(i).size());
 								rightSideDPPerThreshold.get(i).add(dataPoint);
 							}else{
 								ArrayList<Integer> dataPoints = new ArrayList<Integer>();
@@ -392,7 +403,7 @@ public class BasicRegressionTree {
 		
 		Feature bestFeature = features.get(bestFeatureIndex);
 		
-		if(higherstInfoGain > Constant.INFO_GAIN_THRESHOLD){
+		if(higherstInfoGain > Constant.HOUSING_DATA_INFO_GAIN_THRESHOLD){
 			
 			Integer bestThresholdValueIndex = bestThresholdIndexPerFeature.get(bestFeatureIndex);
 			node.setThresholdValue(bestFeature.getThresholdValues().get(bestThresholdValueIndex));
@@ -496,7 +507,7 @@ public class BasicRegressionTree {
 		
 		DescriptiveStatistics descriptiveStatistics = new DescriptiveStatistics();
 		for(int i=0;i<dataPoints.getRowDimension();i++){
-			descriptiveStatistics.addValue(dataMatrix.get(i,Constant.TARGET_VALUE_INDEX));
+			descriptiveStatistics.addValue(dataMatrix.get(i,Constant.HOUSING_DATA_TARGET_VALUE_INDEX));
 		}
 		return descriptiveStatistics.getVariance() * descriptiveStatistics.getN();
 		
@@ -512,7 +523,7 @@ public class BasicRegressionTree {
 		
 		DescriptiveStatistics descriptiveStatistics = new DescriptiveStatistics();
 		for(Integer row : dataPoints){
-			descriptiveStatistics.addValue(dataMatrix.get(row, Constant.TARGET_VALUE_INDEX));
+			descriptiveStatistics.addValue(dataMatrix.get(row, Constant.HOUSING_DATA_TARGET_VALUE_INDEX));
 		}
 		return (descriptiveStatistics.getVariance() * descriptiveStatistics.getN());
 	}
@@ -529,7 +540,8 @@ public class BasicRegressionTree {
 		if(dataPoints.size() > 0){
 			DescriptiveStatistics descriptiveStatistics = new DescriptiveStatistics();
 			for(Integer row : dataPoints){
-				descriptiveStatistics.addValue(dataMatrix.get(row, Constant.TARGET_VALUE_INDEX));
+				descriptiveStatistics.addValue(
+						dataMatrix.get(row, Constant.HOUSING_DATA_TARGET_VALUE_INDEX));
 			}
 			return descriptiveStatistics.getMean();
 		}else{
@@ -549,7 +561,8 @@ public class BasicRegressionTree {
 		
 		DescriptiveStatistics descriptiveStatistics = new DescriptiveStatistics();
 		for(int i=0;i<dataPoints.getRowDimension();i++){
-			descriptiveStatistics.addValue(dataMatrix.get(i,Constant.TARGET_VALUE_INDEX));
+			descriptiveStatistics.addValue(
+					dataMatrix.get(i,Constant.HOUSING_DATA_TARGET_VALUE_INDEX));
 		}
 		return descriptiveStatistics.getMean();
 	}
@@ -586,21 +599,37 @@ public class BasicRegressionTree {
 		}
 	}
 	
+	/**
+	 * This method evaluates the generated Regression Tree Model 
+	 * based upon the Test Dataset.
+	 * 
+	 * It calculates the Mean Standard Error as the measurement of 
+	 * accuracy. 
+	 */
 	public void evaluateTestDataSet(){
 		
-		Matrix dataMatrix =  fileOperations.fetchTrainingDataPoints();
+		Matrix dataMatrix =  fileOperations.fetchDataPointsFromFile(
+				Constant.HOUSING_DATA_FILE_PATH,Constant.HOUSING_TRAINDATA_FILE,
+				Constant.HOUSING_DATA_NUM_OF_TESTING_DP,Constant.HOUSING_DATA_NO_OF_FEATURES);
 		double dataArray[][] = dataMatrix.getArray();
 		
 		Double standardError = 0d;
-		for(int i=0;i< Constant.NUM_OF_TESTING_DATAPOINTS;i++){
-			standardError += predictTargetValue(dataArray[i]);
+		for(int i=0;i< Constant.HOUSING_DATA_NUM_OF_TRAINING_DP;i++){
+			standardError += calculateSEOfPredictedValue(dataArray[i]);
 		}
 		
-		System.out.println("Mean Standard Error :" + (standardError/Constant.NUM_OF_TESTING_DATAPOINTS));
+		System.out.println("Mean Standard Error :" + (standardError/
+				Constant.HOUSING_DATA_NUM_OF_TRAINING_DP));
 		
 	}
 	
-	public Double predictTargetValue(double dataValue[]){
+	/**
+	 * 
+	 * @param dataValue : The feature values and target value of the Data Point
+	 * @return the standard error of the predicted value and the target
+	 * value of the given Data Point.
+	 */
+	public Double calculateSEOfPredictedValue(double dataValue[]){
 		
 		Node node = this.rootNode;
 		
@@ -617,7 +646,7 @@ public class BasicRegressionTree {
 				}
 				
 			}else{
-				Double actualTargetValue = dataValue[Constant.TARGET_VALUE_INDEX];
+				Double actualTargetValue = dataValue[Constant.HOUSING_DATA_TARGET_VALUE_INDEX];
 				Double predictedTargetValue = node.getLabelValue();
 				System.out.printf("%s\t%f\n%s\t%f\n","Actual Value",actualTargetValue,"Predicted Value",predictedTargetValue);
 				return Math.pow(actualTargetValue-predictedTargetValue,2);

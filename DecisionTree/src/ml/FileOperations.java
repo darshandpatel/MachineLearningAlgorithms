@@ -22,45 +22,13 @@ public class FileOperations {
 	 * @return The matrix which rows represent the DataPoints (line in the file)
 	 *  and which columns represent the feature values. 
 	 */
-	public Matrix fetchTrainingDataPoints(){
+	public Matrix fetchDataPointsFromFile(String filePath,String fileName,Integer numOfTrainDP,
+			Integer numOfFeatures){
 		
-		double dataPoints[][] = new double
-				[Constant.NUM_OF_TRAINING_DATAPOINTS][Constant.NUM_OF_FEATURES+1];
+		double dataPoints[][] = new double[numOfTrainDP][numOfFeatures];
 		try{
 			
-			Path trainFilepath = Paths.get(Constant.FILE_PATH,Constant.TRAINDATA_FILE);
-			Integer lineCounter = 0;
-			try(Stream<String> lines = Files.lines(trainFilepath)){
-				Iterator<String> lineIterator = lines.iterator();
-				while(lineIterator.hasNext()){
-					String line = lineIterator.next();
-					String parts[] = line.trim().split("\\s+");
-					for(int i=0;i<parts.length;i++){
-						dataPoints[lineCounter][i] = Double.parseDouble(parts[i]);
-					}
-					lineCounter++;
-				}
-			}
-			
-		}catch(IOException e){
-			System.out.println(e.getMessage());
-		}
-		return new Matrix(dataPoints);
-	}
-	
-	
-	/**
-	 * 
-	 * @return The matrix which rows represent the DataPoints (line in the file)
-	 *  and which columns represent the feature values. 
-	 */
-	public Matrix fetchTestingDataPoints(){
-		
-		double dataPoints[][] = new double
-				[Constant.NUM_OF_TESTING_DATAPOINTS][Constant.NUM_OF_FEATURES+1];
-		try{
-			
-			Path trainFilepath = Paths.get(Constant.FILE_PATH,Constant.TESTDATA_FILE);
+			Path trainFilepath = Paths.get(filePath,fileName);
 			Integer lineCounter = 0;
 			try(Stream<String> lines = Files.lines(trainFilepath)){
 				Iterator<String> lineIterator = lines.iterator();
