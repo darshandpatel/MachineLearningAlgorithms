@@ -6,8 +6,9 @@ public class Run {
 		
 		BasicRegressionTree basicRegressionTree = new BasicRegressionTree();
 		basicRegressionTree.formRegressionTree();
-		System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-		basicRegressionTree.printRegressionTreeNode(basicRegressionTree.getRootNode());
+		//System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+		basicRegressionTree.printRegressionTree();
+		basicRegressionTree.evaluateTestDataSet();
 		
 	}
 

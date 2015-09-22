@@ -19,7 +19,7 @@ public class Constant {
 	public static String BINARY_CAT = "BINARY-CAT";
 	
 	public static String FILE_PATH = 
-			"C:\\Users\\dpatel\\Documents\\MachineLearningAlgorithms\\DecisionTree\\src\\data";
+			"/Users/Darshan/Documents/MachineLearningAlgorithms/DecisionTree/src/data";
 	public static String TRAINDATA_FILE = "housing_train.txt";
 	//public static String TRAINDATA_FILE = "simple_data.txt";
 	public static String TESTDATA_FILE = "housing_test.txt";
@@ -27,6 +27,7 @@ public class Constant {
 	public static Integer NUM_OF_FEATURES = 13;
 	//public static Integer NUM_OF_FEATURES = 2;
 	public static Integer NUM_OF_TRAINING_DATAPOINTS = 433;
+	public static Integer NUM_OF_TESTING_DATAPOINTS = 433;
 	public static Integer TARGET_VALUE_INDEX = 13;
 	//public static Integer TARGET_VALUE_INDEX = 2;
 	
@@ -36,6 +37,6 @@ public class Constant {
 	public static Double INFO_GAIN_THRESHOLD = 1d;
 	public static Double VARIANCE_THRESHOLD = 1d;
 	
-	public static Integer DEPTH_LIMIT = 15;
-	public static Double ERROR_THRESHOLD = 10d;
+	public static Integer DEPTH_LIMIT = 10;
+	public static Double ERROR_THRESHOLD = 20d;
 }
