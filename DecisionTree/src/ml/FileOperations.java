@@ -23,9 +23,9 @@ public class FileOperations {
 	 *  and which columns represent the feature values. 
 	 */
 	public Matrix fetchDataPointsFromFile(String filePath,String fileName,Integer numOfTrainDP,
-			Integer numOfFeatures){
+			Integer numOfAttribute,String splitOperator){
 		
-		double dataPoints[][] = new double[numOfTrainDP][numOfFeatures];
+		double dataPoints[][] = new double[numOfTrainDP][numOfAttribute];
 		try{
 			
 			Path trainFilepath = Paths.get(filePath,fileName);
@@ -34,7 +34,7 @@ public class FileOperations {
 				Iterator<String> lineIterator = lines.iterator();
 				while(lineIterator.hasNext()){
 					String line = lineIterator.next();
-					String parts[] = line.trim().split("\\s+");
+					String parts[] = line.trim().split(splitOperator);
 					for(int i=0;i<parts.length;i++){
 						dataPoints[lineCounter][i] = Double.parseDouble(parts[i]);
 					}

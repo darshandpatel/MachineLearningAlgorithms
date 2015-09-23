@@ -7,7 +7,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map.Entry;
 import java.util.Queue;
-import java.util.concurrent.locks.AbstractQueuedLongSynchronizer.ConditionObject;
 
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
@@ -47,7 +46,8 @@ public class BasicRegressionTree {
 		fileOperations =  new FileOperations();
 		dataMatrix =  fileOperations.fetchDataPointsFromFile(
 				Constant.HOUSING_DATA_FILE_PATH,Constant.HOUSING_TRAINDATA_FILE,
-				Constant.HOUSING_DATA_NUM_OF_TESTING_DP,Constant.HOUSING_DATA_NO_OF_FEATURES);
+				Constant.HOUSING_DATA_NUM_OF_TESTING_DP,Constant.HOUSING_DATA_NO_OF_FEATURES,
+				"\\s+");
 		
 		// Create the root node for Regression Tree and add into Queue
 		Node rootNode = new Node();
@@ -610,7 +610,8 @@ public class BasicRegressionTree {
 		
 		Matrix dataMatrix =  fileOperations.fetchDataPointsFromFile(
 				Constant.HOUSING_DATA_FILE_PATH,Constant.HOUSING_TRAINDATA_FILE,
-				Constant.HOUSING_DATA_NUM_OF_TESTING_DP,Constant.HOUSING_DATA_NO_OF_FEATURES);
+				Constant.HOUSING_DATA_NUM_OF_TESTING_DP,Constant.HOUSING_DATA_NO_OF_FEATURES,
+				"\\s+");
 		double dataArray[][] = dataMatrix.getArray();
 		
 		Double standardError = 0d;
