@@ -52,5 +52,8 @@ public class Constant {
 	
 	public static Integer  SPAMBASE_DATA_TARGET_VALUE_INDEX = 57;
 	public static Integer SPAMBASE_DATA_DEPTH_LIMIT = 10;
+	public static String ENTROPY = "entropy";
+	public static String SPAM_COUNT = "spam_count";
+	public static String HAM_COUNT = "ham_count";
 	// SPAM DATA SET CONSTANT ENDS	
 }

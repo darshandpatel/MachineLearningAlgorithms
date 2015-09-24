@@ -15,6 +15,7 @@ public class Node {
 	Node parentNode;
 	Double error;
 	Integer featureIndex;
+	Double entropy;
 	
 	public ArrayList<Integer> getDataPoints() {
 		return dataPoints;
@@ -83,6 +84,12 @@ public class Node {
 	}
 	public void setFeatureIndex(Integer featureIndex) {
 		this.featureIndex = featureIndex;
+	}
+	public Double getEntropy() {
+		return entropy;
+	}
+	public void setEntropy(Double entropy) {
+		this.entropy = entropy;
 	}
 	
 }

@@ -17,6 +17,12 @@ public class Feature {
 		this.index = index;
 	}
 	
+	public Feature(String type, ArrayList<Double> thresholdValues,Integer index){
+		this.type = type;
+		this.thresholdValues = thresholdValues;
+		this.index = index;
+	}
+	
 	public String getName() {
 		return name;
 	}
