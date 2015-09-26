@@ -37,15 +37,16 @@ public class Constant {
 	public static Double HOUSING_DATA_VARIANCE_THRESHOLD = 1d;
 	
 	public static Integer HOUSING_DATA_DEPTH_LIMIT = 10;
-	public static Double HOUSING_DATA_ERROR_THRESHOLD = 20d;
+	public static Double HOUSING_DATA_ERROR_THRESHOLD = 0.1d;
 	
 	//HOUSING DATA SET CONSTANT ENDS
 	
 	// SPAM DATA SET CONSTANT STARTS
 
 	public static Integer SPAMBASE_DATA_NUM_OF_DP = 4601;
+	//4601
 	public static Integer SPAMBASE_DATA_NUM_OF_FEATURES = 57;
-	public static Double SPAMBASE_DATA_INFO_GAIN_THRESHOLD = 1d;
+	public static Double SPAMBASE_DATA_INFO_GAIN_THRESHOLD = 0.1d;
 	public static String SPAMBASE_DATA_FILE_PATH = 
 			"/Users/Darshan/Documents/MachineLearningAlgorithms/DecisionTree/src/data";
 	public static String SPAMBASE_DATA_FILE_NAME = "spambase.data";

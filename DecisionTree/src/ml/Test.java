@@ -13,6 +13,7 @@ public class Test {
 	
 	public static void main(String args[]){
 
+		System.out.println(Math.log(0d));
 		DescriptiveStatistics descriptiveStatistics = new DescriptiveStatistics();
 		ArrayList<Integer> values = new ArrayList(Arrays.asList(31,32,30,31,30));
 		for(Integer row : values){

@@ -43,101 +43,109 @@ public class DecisionTree{
 		
 		int numOfFolds = 10;
 		int currentFoldCount = 1;
-		
+		Double sumOfAccuracy = 0d;
 		while(currentFoldCount <= numOfFolds){
 			
 			
 			//System.out.println("Current Fold number" + currentFoldCount);
 			
 			// Form Decision Tree
-			Matrix trainDataMatrix = formTrainDataMatrixByFold(numOfFolds,currentFoldCount);
-			//System.out.println("Train Data Matrix Dimenstions");
+			System.out.println("===============================");
+			System.out.println("Fold count : "+currentFoldCount);
+			HashMap<String,Matrix> matrixHashMap = formDataMatrixByFold(numOfFolds,currentFoldCount);
+			Matrix trainDataMatrix = matrixHashMap.get(Constant.TRAIN);
+			//System.out.println("Train Data Matrix Dimensions");
 			//System.out.printf("%s : %d\n%s : %d","# of rows",trainDataMatrix.getRowDimension(),
 			//		"# od columns",trainDataMatrix.getColumnDimension());
 			
 			Node rootNode = new Node();
-			rootNode.setDataPoints(dataMatrix.getRowDimension());
+			rootNode.setDataPoints(trainDataMatrix.getRowDimension());
 			HashMap<String,Object> entropyMap = calculateEntropy(rootNode.getDataPoints(),trainDataMatrix);
+			
 			rootNode.setEntropy((Double)entropyMap.get(Constant.ENTROPY));
 			rootNode.setLabelValue(
-					((Double)entropyMap.get(Constant.SPAM_COUNT) > 
-					(Double)entropyMap.get(Constant.HAM_COUNT))?1d:0d);
+					((Integer)entropyMap.get(Constant.SPAM_COUNT) > 
+					(Integer)entropyMap.get(Constant.HAM_COUNT))?1d:0d);
 			formTrainDecisionTree(rootNode,trainDataMatrix);
+			//System.out.println("Print the Decision Tree");
 			
-			Matrix testDataMatrix = formTestDataMatrixByFold(numOfFolds,currentFoldCount);
-			System.out.println("Train Data Matrix Dimenstions");
-			System.out.printf("%s : %d\n%s : %d","# of rows",testDataMatrix.getRowDimension(),
-					"# od columns",testDataMatrix.getColumnDimension());
-			
-			currentFoldCount++;
+			printDecisionTree(rootNode);
+
 			// Evaluate Decision Tree
+			Matrix testDataMatrix = matrixHashMap.get(Constant.TEST);
+			//System.out.println("Train Data Matrix Dimenstions");
+			//System.out.printf("%s : %d\n%s : %d","# of rows\n",testDataMatrix.getRowDimension(),
+			//		"# od columns",testDataMatrix.getColumnDimension());
+			currentFoldCount++;
 			
 			// Accumulate Results
+			Double accuracy = evaluateTestDataSet(testDataMatrix, rootNode);
+			sumOfAccuracy += accuracy;
+			//break;
 			
 		}
 		
 		// Print the Results
+		System.out.println("Final accuracy : "+ sumOfAccuracy/numOfFolds);
+		
 	}
 	
 	
 	
-	public Matrix formTrainDataMatrixByFold(Integer numOfFolds,Integer currentFoldCount){
+	public HashMap<String,Matrix> formDataMatrixByFold(Integer numOfFolds,Integer currentFoldCount){
 		
+		HashMap<String,Matrix> matrixHashMap = new HashMap<String,Matrix>();
 		int numOfDPPerFold = Constant.SPAMBASE_DATA_NUM_OF_DP / numOfFolds;
-		int extraDP = (currentFoldCount != numOfFolds?Constant.SPAMBASE_DATA_NUM_OF_DP % numOfFolds:0);
+		int trainExtraDP = (currentFoldCount != numOfFolds?Constant.SPAMBASE_DATA_NUM_OF_DP % numOfFolds:0);
+		int testExtraDP = (currentFoldCount == numOfFolds?Constant.SPAMBASE_DATA_NUM_OF_DP % numOfFolds:0);
 		
-		int numOfDPInTrain = ((numOfFolds - 1) * numOfDPPerFold) + extraDP;
+		int numOfDPInTrain = ((numOfFolds - 1) * numOfDPPerFold) + trainExtraDP;
+		int numOfDPInTest = numOfDPPerFold + testExtraDP;
 		double trainData[][] = 
-				new double[numOfDPInTrain][Constant.SPAMBASE_DATA_NUM_OF_FEATURES];
+				new double[numOfDPInTrain][Constant.SPAMBASE_DATA_NUM_OF_FEATURES+1];
+		double testData[][] = 
+				new double[numOfDPInTest][Constant.SPAMBASE_DATA_NUM_OF_FEATURES+1];
 		int trainDPIndex = 0;
+		int testDPIndex = 0;
 		
 		for(int i = 1; i <= numOfFolds; i++){
 			
+			int startIndex = (i - 1) * numOfDPPerFold;
+			
+			
 			if(i != currentFoldCount){
-				
-				int startIndex = (i - 1) * numOfDPPerFold;
-				int endIndex = startIndex + (numOfDPPerFold - 1) + (currentFoldCount == numOfFolds?extraDP:0);
-				
+				int endIndex = startIndex + (numOfDPPerFold - 1) + (currentFoldCount == numOfFolds?trainExtraDP:0);
 				while(startIndex <= endIndex){
-					for(int j = 0 ; j <Constant.SPAMBASE_DATA_NUM_OF_FEATURES;j++)
+					for(int j = 0 ; j <= Constant.SPAMBASE_DATA_NUM_OF_FEATURES;j++)
 						trainData[trainDPIndex][j] = dataMatrix.get(startIndex, j);
 					startIndex++;
 					trainDPIndex++;
 				}
+			}else{
+				int endIndex = startIndex + (numOfDPPerFold - 1) + (currentFoldCount == numOfFolds?testExtraDP:0);
+				while(startIndex <= endIndex){
+					for(int j = 0 ; j <= Constant.SPAMBASE_DATA_NUM_OF_FEATURES;j++)
+						testData[testDPIndex][j] = dataMatrix.get(startIndex, j);
+					startIndex++;
+					testDPIndex++;
+				}
+				
 			}
 		}
-		
-		return new Matrix(trainData);
+		matrixHashMap.put(Constant.TRAIN, new Matrix(trainData));
+		matrixHashMap.put(Constant.TEST, new Matrix(testData));
+		return matrixHashMap;
 	}
 	
-	public Matrix formTestDataMatrixByFold(Integer numOfFolds,Integer currentFoldCount){
-		
-		int numOfDPPerFold = Constant.SPAMBASE_DATA_NUM_OF_DP / numOfFolds;
-		int extraDP = (currentFoldCount == numOfFolds?Constant.SPAMBASE_DATA_NUM_OF_DP % numOfFolds:0);
-		int numOfDPInTrain = numOfDPPerFold + extraDP;
-		double testData[][] = 
-				new double[numOfDPInTrain][Constant.SPAMBASE_DATA_NUM_OF_FEATURES];
-				
-		int startIndex = (currentFoldCount - 1) * numOfDPPerFold;
-		int endIndex = startIndex + (numOfDPPerFold - 1) + extraDP;
-		int testDPIndex = 0;
-		
-		while(startIndex <= endIndex){
-			for(int j = 0 ; j <Constant.SPAMBASE_DATA_NUM_OF_FEATURES;j++)
-				testData[testDPIndex][j] = dataMatrix.get(startIndex, j);
-			startIndex++;
-			testDPIndex++;
-		}
-		
-		return new Matrix(testData);
-	}
 
 	public HashMap<String,Object> calculateEntropy(ArrayList<Integer> dataPoints,Matrix dataMatrix){
 		
 		int numOfSpamInstant = 0;
 		int numOfHamInstant = 0;
-		HashMap<String,Object> entropyMap = new HashMap<String,Object>();
 		
+		HashMap<String,Object> entropyMap = new HashMap<String,Object>();
+		//System.out.println("Matrix # of rows :"+dataMatrix.getRowDimension());
+		//System.out.println("Matrix # of columns :"+dataMatrix.getColumnDimension());
 		for(Integer dataPoint : dataPoints){
 			if(dataMatrix.get(dataPoint,Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX) == 1)
 				numOfSpamInstant++;
@@ -145,11 +153,16 @@ public class DecisionTree{
 				numOfHamInstant++;
 		}
 		
+		//System.out.println("# of spam : "+numOfSpamInstant);
+		//System.out.println("# of ham : "+numOfHamInstant);
+		
 		int totalInstanct = numOfHamInstant + numOfSpamInstant;
 		double spamProbability = (double)numOfSpamInstant/totalInstanct;
 		double hamProbability = (double)numOfHamInstant/totalInstanct;
 		
 		Double entropy = -((spamProbability * log2(spamProbability)) + (hamProbability * log2(hamProbability)));
+		
+		//System.out.println("Entropy : "+entropy);
 		
 		entropyMap.put(Constant.ENTROPY, entropy);
 		entropyMap.put(Constant.SPAM_COUNT, numOfSpamInstant);
@@ -160,9 +173,17 @@ public class DecisionTree{
 	
 	private static double log2(double n)
 	{
-	    return (Math.log(n) / Math.log(2));
+		if(n != 0)
+			return (Math.log(n) / Math.log(2));
+		else
+			return 0d;
 	}
 	
+	/**
+	 * This method forms the Decision Tree based on the given training Data Matrix
+	 * @param rootNode
+	 * @param trainDataMatrix
+	 */
 	public void formTrainDecisionTree(Node rootNode,Matrix trainDataMatrix){
 		
 		Integer exploredNodeCount = 0;
@@ -173,6 +194,7 @@ public class DecisionTree{
 		
 		// Form the tree until Node queue is not empty and the # of explored node 
 		// is less the # of explored node limit
+		
 		while( (nodeQueue.size() > 0) && (exploredNodeCount < exploredNodeLimit)){
 			
 			Node currentNode = nodeQueue.poll();
@@ -180,22 +202,22 @@ public class DecisionTree{
 			//System.out.println("##############################");
 			//System.out.println("Parent node Data Points are	:" + 
 			//currentNode.getDataPoints().size());
-			//System.out.println("Parent node error is 		:"+currentNode.getError());
+			//System.out.println("Parent node entropy is 		:"+currentNode.getEntropy());
 			
 			splitNodeByBestFeaturethreshold(currentNode);
 			
 			if(currentNode.getLeftChildNode() != null){
 				
 				Node leftNode = currentNode.getLeftChildNode();
-				if(leftNode.getError() > Constant.HOUSING_DATA_ERROR_THRESHOLD)
-					nodeQueue.add(currentNode.getLeftChildNode());
+				//if(leftNode.getEntropy() > Constant.HOUSING_DATA_ERROR_THRESHOLD)
+				nodeQueue.add(leftNode);
 				
 			}
 			if(currentNode.getRightChildNode() != null){
 				
 				Node rightNode = currentNode.getRightChildNode();
-				if(rightNode.getError() > Constant.HOUSING_DATA_ERROR_THRESHOLD)
-					nodeQueue.add(currentNode.getRightChildNode());
+				//if(rightNode.getEntropy() > Constant.HOUSING_DATA_ERROR_THRESHOLD)
+				nodeQueue.add(rightNode);
 				
 			}
 		}
@@ -214,7 +236,7 @@ public class DecisionTree{
 		
 		Double parentNodeEntrpy = node.getEntropy();
 		ArrayList<Integer> currentNodeDataPoints = node.getDataPoints();
-		Integer NoOfCurrentNodeDataPoints = currentNodeDataPoints.size();
+		Integer noOfCurrentNodeDataPoints = currentNodeDataPoints.size();
 		
 		ArrayList<Feature> features = fetchFeaturePosThreshold(dataMatrix,currentNodeDataPoints);
 		
@@ -238,15 +260,15 @@ public class DecisionTree{
 			int featureIndex = feature.getIndex();
 
 			ArrayList<Double> thresholdValues = feature.getThresholdValues();
-			//System.out.println("Feature index"+feature.getIndex());
-			//System.out.println("Feature Threshold" + thresholdValues.toString());
+			//System.out.println("Feature index :"+feature.getIndex());
+			//System.out.println("Feature Threshold :" + thresholdValues.toString());
 			int noOfThresholdValues = thresholdValues.size();
 			
 			if(feature.getType().equals(Constant.NUMERIC)){
 				
 				for(int i = 0 ; i < noOfThresholdValues;i++){
 					
-					for(int k = 0 ; k < NoOfCurrentNodeDataPoints ; k++){
+					for(int k = 0 ; k < noOfCurrentNodeDataPoints ; k++){
 						
 						Integer dataPoint = currentNodeDataPoints.get(k);
 						Double trainFeatureValue = dataMatrix.get(dataPoint,featureIndex);
@@ -264,7 +286,7 @@ public class DecisionTree{
 							}
 						}else{
 							if(rightSideDPPerThreshold.containsKey(i)){
-								//System.out.println("Right side node Threshol value index : "+i+"
+								//System.out.println("Right side node Threshold value index : "+i+"
 								// Threshold value "+trainFeatureValue+", size is : " + 
 								//rightSideDPPerThreshold.get(i).size());
 								rightSideDPPerThreshold.get(i).add(dataPoint);
@@ -280,7 +302,7 @@ public class DecisionTree{
 				
 				for(int i= 0 ; i< noOfThresholdValues;i++){
 					
-					for(int k = 0 ; k < NoOfCurrentNodeDataPoints ; k++){
+					for(int k = 0 ; k < noOfCurrentNodeDataPoints ; k++){
 					
 						Integer dataPoint = currentNodeDataPoints.get(k);
 						Double trainFeatureValue = dataMatrix.get(dataPoint,featureIndex);
@@ -328,7 +350,7 @@ public class DecisionTree{
 			
 			bestThresholdIndexPerFeature.put(featureIndex,bestThresholdIndex);
 			
-			Double infoGain = parentNodeEntrpy - (lowestEntropy/currentNodeDataPoints.size());
+			Double infoGain = parentNodeEntrpy - (double)(lowestEntropy/currentNodeDataPoints.size());
 			infoGainPerFeatureBestThreshold.put(featureIndex,infoGain);
 			
 			/*
@@ -341,9 +363,11 @@ public class DecisionTree{
 			thresholdValues.get(bestThresholdIndex));
 			*/
 			
+			
+			
 			if(leftSideDPPerThreshold.get(bestThresholdIndex) != null){
 				//System.out.println("# of datapoint on left side: " + 
-				//leftSideDPPerThreshold.get(bestThresholdIndex).size());
+				//	leftSideDPPerThreshold.get(bestThresholdIndex).size());
 				leftSideDPForFeaturesBestThreshold.put(featureIndex,
 						leftSideDPPerThreshold.get(bestThresholdIndex));
 			}
@@ -374,24 +398,25 @@ public class DecisionTree{
 		
 		for(int i =0 ; i < noOfThresholdValues; i++){
 			
+			Double totalChildNodeEntroy = 0d;
 			Double entropyOfLeftChild = 0d;
 			if(leftDataPoints.containsKey(i)){
 				//System.out.println(leftDataPoints.get(i).toString());
 				HashMap<String,Object> entropyLeftSideMap= calculateEntropy(leftDataPoints.get(i),dataMatrix);
 				entropyOfLeftChild = (Double)entropyLeftSideMap.get(Constant.ENTROPY);
+				totalChildNodeEntroy += (entropyOfLeftChild * leftDataPoints.get(i).size());
 			}
-			//System.out.println("Left side error : "+leftLabelValueError);
+			//System.out.println("Left side entropy : "+entropyOfLeftChild);
 			
 			Double entropyRightChild = 0d;
 			if(rightDataPoints.containsKey(i)){
 				//System.out.println(rightDataPoints.get(i).toString());
 				HashMap<String,Object> entropyRightSideMap= calculateEntropy(rightDataPoints.get(i),dataMatrix);
 				entropyRightChild = (Double)entropyRightSideMap.get(Constant.ENTROPY);
+				totalChildNodeEntroy += (entropyRightChild * rightDataPoints.get(i).size());
 			}
-			//System.out.println("Right side error : "+rightLabelValueError);
+			//System.out.println("Right side entropy : "+entropyRightChild);
 			
-			Double totalChildNodeEntroy = ((leftDataPoints.get(i).size()*entropyOfLeftChild) + 
-					(rightDataPoints.get(i).size()*entropyRightChild));
 			//System.out.println("Threshold Index : "+ i +"\t Threshold value : "+thresholdValues.get(i) 
 			//		+ "\t Error Value : "+error);
 			entropyPerThreshold.put(i, totalChildNodeEntroy);
@@ -521,7 +546,7 @@ public class DecisionTree{
 			
 			Integer bestThresholdValueIndex = bestThresholdIndexPerFeature.get(bestFeatureIndex);
 			node.setThresholdValue(bestFeature.getThresholdValues().get(bestThresholdValueIndex));
-			node.setFeatureIndex(bestFeature.getIndex());
+			node.setFeatureIndex(bestFeatureIndex);
 			//System.out.println("More than threshold information gain");
 			
 			//System.out.println("Best Threshold value	:" + bestFeature.getThresholdValues()
@@ -538,10 +563,10 @@ public class DecisionTree{
 				HashMap<String,Object> entropyMap = calculateEntropy(leftNode.getDataPoints(), dataMatrix);
 				leftNode.setEntropy((Double)entropyMap.get(Constant.ENTROPY));
 				leftNode.setLabelValue(
-						((Double)entropyMap.get(Constant.SPAM_COUNT) > 
-						(Double)entropyMap.get(Constant.HAM_COUNT))?1d:0d);
+						((Integer)entropyMap.get(Constant.SPAM_COUNT) > 
+						(Integer)entropyMap.get(Constant.HAM_COUNT))?1d:0d);
 				//System.out.println("LEft label value :"+leftNode.getLabelValue());
-				//System.out.println("LEft node error :"+leftNode.getError());
+				//System.out.println("LEft node entropy :"+(Double)entropyMap.get(Constant.ENTROPY));
 				node.setLeftChildNode(leftNode);
 				
 			}
@@ -558,14 +583,112 @@ public class DecisionTree{
 				HashMap<String,Object> entropyMap = calculateEntropy(rightNode.getDataPoints(), dataMatrix);
 				rightNode.setEntropy((Double)entropyMap.get(Constant.ENTROPY));
 				rightNode.setLabelValue(
-						((Double)entropyMap.get(Constant.SPAM_COUNT) > 
-						(Double)entropyMap.get(Constant.HAM_COUNT))?1d:0d);
+						((Integer)entropyMap.get(Constant.SPAM_COUNT) > 
+						(Integer)entropyMap.get(Constant.HAM_COUNT))?1d:0d);
 				//System.out.println("Right label value :"+rightNode.getLabelValue());
-				//System.out.println("Right node error :"+rightNode.getError());
+				//System.out.println("Right node entropy :"+(Double)entropyMap.get(Constant.ENTROPY));
 				node.setRightChildNode(rightNode);
 			}
 			
 		}
+		
+	}
+	
+	/**
+	 * This method print the important information of the given Regression Tree
+	 * Node
+	 * @param node : Regression Tree Root Node
+	 */
+	public void printDecisionTree(Node rootNode){
+		
+		Queue<Node> nodeQueue =  new LinkedList<Node>();
+		nodeQueue.add(rootNode);
+		Integer count = 1;
+		while(nodeQueue.size() > 0){
+			
+			Node node = nodeQueue.poll();
+			
+			/*
+			System.out.printf("%30s\t\t\t:\t%d\n","Node number",count);
+			System.out.printf("%30s\t\t\t:\t%f\n","Node Entropy",node.getEntropy());
+			System.out.printf("%30s\t\t\t:\t%d\n","Feature index",node.getFeatureIndex());
+			System.out.printf("%30s\t\t\t:\t%f\n","Feature Threshold Value",node.getThresholdValue());
+			System.out.printf("%30s\t\t\t:\t%f\n","Label Value",node.getLabelValue());
+			System.out.printf("%30s\t\t\t:\t%f\n","Parent Node number",Math.floor(count/2));
+			System.out.printf("%30s\t\t\t:\t%d\n\n","Number of Data Points",node.getDataPoints().size());
+			*/
+			
+			if(node.getLeftChildNode() != null){
+				nodeQueue.add(node.getLeftChildNode());
+			}
+			if(node.getRightChildNode() != null){
+				nodeQueue.add(node.getRightChildNode());
+			}
+			count++;
+		}
+	}
+	
+	/**
+	 * This method evaluates the generated Regression Tree Model 
+	 * based upon the Test Dataset.
+	 * 
+	 * It calculates the Mean Standard Error as the measurement of 
+	 * accuracy. 
+	 */
+	public Double evaluateTestDataSet(Matrix testDataMatrix,Node rootNode){
+		
+		double testDataArray[][] = testDataMatrix.getArray();
+		
+		Double score = 0d;
+		Integer numOfDP = testDataMatrix.getRowDimension();
+		for(int i=0;i< numOfDP;i++){
+			score += validatePredictionValue(testDataArray[i],rootNode);
+		}
+		
+		Double accuracy = score / testDataMatrix.getRowDimension();
+		System.out.println("Match score :"+score);
+		System.out.println("# of Records :"+testDataMatrix.getRowDimension());
+		System.out.println("Accuracy :" + accuracy);
+		return accuracy;
+		
+	}
+	
+	/**
+	 * 
+	 * @param dataValue : The feature values and target value of the Data Point
+	 * @return the standard error of the predicted value and the target
+	 * value of the given Data Point.
+	 */
+	public Integer validatePredictionValue(double dataValue[],Node rootNode){
+		
+		Node node = rootNode;
+		
+		while(true){
+
+			if(node.getFeatureIndex() != null){
+				
+				Double featureValue = dataValue[node.getFeatureIndex()];
+				// Check whether flow should go to left or right
+				if(featureValue < node.getThresholdValue()){
+					node = node.getLeftChildNode();
+				}else{
+					node = node.getRightChildNode();
+				}
+				
+			}else{
+				double actualTargetValue = dataValue[Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX];
+				double predictedTargetValue = node.getLabelValue();
+				//System.out.println("Actual value : "+ actualTargetValue + " Predicted value :"+predictedTargetValue);
+				if(actualTargetValue == predictedTargetValue){
+					return 1;
+				}
+				else{
+					return 0;
+				}
+					
+			}
+		}
+		
 		
 	}
 
