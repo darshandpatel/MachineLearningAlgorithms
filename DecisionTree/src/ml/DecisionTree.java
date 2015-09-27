@@ -25,8 +25,8 @@ public class DecisionTree{
 	
 	
 	/**
-	 * Constructor : Which fetches the Data Matrix from the train Data set file 
-	 * and create the root node of Decision tree.
+	 * Constructor : Which fetches the Data Matrix from the source file
+	 * and creates the Matrix from it.
 	 */
 	public DecisionTree(){
 		
@@ -39,25 +39,35 @@ public class DecisionTree{
 		
 	}
 	
+	/**
+	 * This method creates the Multiple Decision Tree by dividing 
+	 * the given DataSet into different training and testing portion.
+	 */
 	public void formMultipleDecisionTrees(){
 		
+		// Number of fold will be created on the given Data Matrix;
 		int numOfFolds = 10;
 		int currentFoldCount = 1;
+		
+		// Total average accuracy of all the Decision Trees.
 		Double sumOfAccuracy = 0d;
+		
 		while(currentFoldCount <= numOfFolds){
-			
 			
 			//System.out.println("Current Fold number" + currentFoldCount);
 			
 			// Form Decision Tree
 			System.out.println("===============================");
 			System.out.println("Fold count : "+currentFoldCount);
+			
 			HashMap<String,Matrix> matrixHashMap = formDataMatrixByFold(numOfFolds,currentFoldCount);
 			Matrix trainDataMatrix = matrixHashMap.get(Constant.TRAIN);
+			
 			//System.out.println("Train Data Matrix Dimensions");
 			//System.out.printf("%s : %d\n%s : %d","# of rows",trainDataMatrix.getRowDimension(),
 			//		"# od columns",trainDataMatrix.getColumnDimension());
 			
+			// Root Node for the current Decision Tree
 			Node rootNode = new Node();
 			rootNode.setDataPoints(trainDataMatrix.getRowDimension());
 			HashMap<String,Object> entropyMap = calculateEntropy(rootNode.getDataPoints(),trainDataMatrix);
@@ -91,20 +101,33 @@ public class DecisionTree{
 	}
 	
 	
-	
+	/**
+	 * This method split the whole Data Matrix into two parts, training and testing parts,
+	 * based upon the given current fold count and total number of folds.
+	 * 
+	 * @param numOfFolds : Total number of the fold
+	 * @param currentFoldCount : Current fold count
+	 * @return : The HashMap which contains the training and testing Data Matrix based
+	 * upon the given current fold count and number of the fold
+	 */
 	public HashMap<String,Matrix> formDataMatrixByFold(Integer numOfFolds,Integer currentFoldCount){
 		
 		HashMap<String,Matrix> matrixHashMap = new HashMap<String,Matrix>();
+		
 		int numOfDPPerFold = Constant.SPAMBASE_DATA_NUM_OF_DP / numOfFolds;
+		
+		// Extra Data Points
 		int trainExtraDP = (currentFoldCount != numOfFolds?Constant.SPAMBASE_DATA_NUM_OF_DP % numOfFolds:0);
 		int testExtraDP = (currentFoldCount == numOfFolds?Constant.SPAMBASE_DATA_NUM_OF_DP % numOfFolds:0);
 		
 		int numOfDPInTrain = ((numOfFolds - 1) * numOfDPPerFold) + trainExtraDP;
 		int numOfDPInTest = numOfDPPerFold + testExtraDP;
+		
 		double trainData[][] = 
 				new double[numOfDPInTrain][Constant.SPAMBASE_DATA_NUM_OF_FEATURES+1];
 		double testData[][] = 
 				new double[numOfDPInTest][Constant.SPAMBASE_DATA_NUM_OF_FEATURES+1];
+		
 		int trainDPIndex = 0;
 		int testDPIndex = 0;
 		
@@ -112,9 +135,9 @@ public class DecisionTree{
 			
 			int startIndex = (i - 1) * numOfDPPerFold;
 			
-			
 			if(i != currentFoldCount){
-				int endIndex = startIndex + (numOfDPPerFold - 1) + (currentFoldCount == numOfFolds?trainExtraDP:0);
+				int endIndex = startIndex + (numOfDPPerFold - 1) + 
+						(currentFoldCount == numOfFolds?trainExtraDP:0);
 				while(startIndex <= endIndex){
 					for(int j = 0 ; j <= Constant.SPAMBASE_DATA_NUM_OF_FEATURES;j++)
 						trainData[trainDPIndex][j] = dataMatrix.get(startIndex, j);
@@ -122,7 +145,8 @@ public class DecisionTree{
 					trainDPIndex++;
 				}
 			}else{
-				int endIndex = startIndex + (numOfDPPerFold - 1) + (currentFoldCount == numOfFolds?testExtraDP:0);
+				int endIndex = startIndex + (numOfDPPerFold - 1) + 
+						(currentFoldCount == numOfFolds?testExtraDP:0);
 				while(startIndex <= endIndex){
 					for(int j = 0 ; j <= Constant.SPAMBASE_DATA_NUM_OF_FEATURES;j++)
 						testData[testDPIndex][j] = dataMatrix.get(startIndex, j);
@@ -132,12 +156,19 @@ public class DecisionTree{
 				
 			}
 		}
+		
 		matrixHashMap.put(Constant.TRAIN, new Matrix(trainData));
 		matrixHashMap.put(Constant.TEST, new Matrix(testData));
 		return matrixHashMap;
 	}
 	
 
+	/**
+	 * 
+	 * @param dataPoints : The Data Points
+	 * @param dataMatrix : The Data Matrix
+	 * @return : The entropy in the given Data points based upon the given Data Matrix.
+	 */
 	public HashMap<String,Object> calculateEntropy(ArrayList<Integer> dataPoints,Matrix dataMatrix){
 		
 		int numOfSpamInstant = 0;
@@ -160,7 +191,8 @@ public class DecisionTree{
 		double spamProbability = (double)numOfSpamInstant/totalInstanct;
 		double hamProbability = (double)numOfHamInstant/totalInstanct;
 		
-		Double entropy = -((spamProbability * log2(spamProbability)) + (hamProbability * log2(hamProbability)));
+		Double entropy = -((spamProbability * log2(spamProbability)) + 
+				(hamProbability * log2(hamProbability)));
 		
 		//System.out.println("Entropy : "+entropy);
 		
@@ -171,6 +203,11 @@ public class DecisionTree{
 		return entropyMap;
 	}
 	
+	/**
+	 * 
+	 * @param n : Number
+	 * @return the log (base 2) of the given number
+	 */
 	private static double log2(double n)
 	{
 		if(n != 0)
@@ -181,8 +218,9 @@ public class DecisionTree{
 	
 	/**
 	 * This method forms the Decision Tree based on the given training Data Matrix
-	 * @param rootNode
-	 * @param trainDataMatrix
+	 * @param rootNode : The Root node of the Decision Tree which will be fully formed
+	 * by this method
+	 * @param trainDataMatrix : The Data Matrix of the Training Data Points.
 	 */
 	public void formTrainDecisionTree(Node rootNode,Matrix trainDataMatrix){
 		
@@ -204,6 +242,7 @@ public class DecisionTree{
 			//currentNode.getDataPoints().size());
 			//System.out.println("Parent node entropy is 		:"+currentNode.getEntropy());
 			
+		
 			splitNodeByBestFeaturethreshold(currentNode);
 			
 			if(currentNode.getLeftChildNode() != null){
@@ -227,10 +266,11 @@ public class DecisionTree{
 	
 	/**
 	 * This method find the best feature and its best threshold value to
-	 * split the given Regression tree node.
+	 * split the given Decision tree node.
 	 * If the split is possible then the method will create the child nodes
 	 * of the given node.
-	 * @param node : The node
+	 * @param node : The node for which best split feature and threshold value
+	 * needs to be found.
 	 */
 	public void splitNodeByBestFeaturethreshold(Node node){
 		
@@ -337,7 +377,8 @@ public class DecisionTree{
 					leftSideDPPerThreshold,rightSideDPPerThreshold);
 			
 			
-			Iterator<Entry<Integer, Double>> labelSEIterator = entropyPerThresholdValue.entrySet().iterator();
+			Iterator<Entry<Integer, Double>> labelSEIterator = 
+					entropyPerThresholdValue.entrySet().iterator();
 			Double lowestEntropy = Double.POSITIVE_INFINITY;
 			Integer bestThresholdIndex=0;
 			while(labelSEIterator.hasNext()){
@@ -363,8 +404,6 @@ public class DecisionTree{
 			thresholdValues.get(bestThresholdIndex));
 			*/
 			
-			
-			
 			if(leftSideDPPerThreshold.get(bestThresholdIndex) != null){
 				//System.out.println("# of datapoint on left side: " + 
 				//	leftSideDPPerThreshold.get(bestThresholdIndex).size());
@@ -387,6 +426,16 @@ public class DecisionTree{
 		
 	}
 	
+	/**
+	 * 
+	 * @param feature : A feature object
+	 * @param leftDataPoints : HashMap which has possible Threshold value as key and
+	 * the Left side data points after the split of a node, by the threshold value, as value.
+	 * @param rightDataPoints : HashMap which has possible Threshold value as key and
+	 * the right side data points after the split of a node, by the threshold value, as value.
+	 * @return : HashMap which has key as the feature index and value as the entropy of the 
+	 * right and left side data Points.
+	 */
 	public HashMap<Integer,Double> calculateEntropy(Feature feature,
 			HashMap<Integer,ArrayList<Integer>> leftDataPoints,
 			HashMap<Integer,ArrayList<Integer>> rightDataPoints){
@@ -402,7 +451,8 @@ public class DecisionTree{
 			Double entropyOfLeftChild = 0d;
 			if(leftDataPoints.containsKey(i)){
 				//System.out.println(leftDataPoints.get(i).toString());
-				HashMap<String,Object> entropyLeftSideMap= calculateEntropy(leftDataPoints.get(i),dataMatrix);
+				HashMap<String,Object> entropyLeftSideMap = 
+						calculateEntropy(leftDataPoints.get(i),dataMatrix);
 				entropyOfLeftChild = (Double)entropyLeftSideMap.get(Constant.ENTROPY);
 				totalChildNodeEntroy += (entropyOfLeftChild * leftDataPoints.get(i).size());
 			}
@@ -411,13 +461,14 @@ public class DecisionTree{
 			Double entropyRightChild = 0d;
 			if(rightDataPoints.containsKey(i)){
 				//System.out.println(rightDataPoints.get(i).toString());
-				HashMap<String,Object> entropyRightSideMap= calculateEntropy(rightDataPoints.get(i),dataMatrix);
+				HashMap<String,Object> entropyRightSideMap = 
+						calculateEntropy(rightDataPoints.get(i),dataMatrix);
 				entropyRightChild = (Double)entropyRightSideMap.get(Constant.ENTROPY);
 				totalChildNodeEntroy += (entropyRightChild * rightDataPoints.get(i).size());
 			}
 			//System.out.println("Right side entropy : "+entropyRightChild);
 			
-			//System.out.println("Threshold Index : "+ i +"\t Threshold value : "+thresholdValues.get(i) 
+			//System.out.println("Threshold Index : "+ i +"\t Threshold value : "+thresholdValues.get(i)
 			//		+ "\t Error Value : "+error);
 			entropyPerThreshold.put(i, totalChildNodeEntroy);
 			
@@ -465,15 +516,21 @@ public class DecisionTree{
 		
 	}
 	
-	private ArrayList<Feature> createFeatures(HashMap<Integer , 
-			ArrayList<Double>> featurePosThreshold){
+	/**
+	 * 
+	 * @param featurePosThreshold : A HashMap which has key as feature index and
+	 * value as the possible threshold value
+	 * @return The ArrayList of feature objects.
+	 */
+	private ArrayList<Feature> createFeatures(HashMap<Integer,ArrayList<Double>> 
+			featuresPosThreshold){
 	
 		ArrayList<Feature> features = new ArrayList<Feature>();
 		for(int i = 0; i < Constant.SPAMBASE_DATA_NUM_OF_FEATURES;i++){
 			
 			String featureCtg = null;
 			
-			ArrayList<Double> calculatedFeaturePosCriValues = featurePosThreshold.get(i);
+			ArrayList<Double> calculatedFeaturePosCriValues = featuresPosThreshold.get(i);
 			Collections.sort(calculatedFeaturePosCriValues);
 			
 			featureCtg = Constant.NUMERIC;
@@ -515,6 +572,23 @@ public class DecisionTree{
 		
 	}
 	
+	
+	/**
+	 * This method creates the child nodes for the given node.
+	 * 
+	 * @param node 		: The node for which child nodes need to be created.
+	 * @param features 	: The available features for the split
+	 * @param infoGainPerFeatureBestThreshold 	: HashMap which contains the feature index
+	 *  as key and the maximum information it can again after the split as value.
+	 * @param bestThresholdIndexPerFeature		:  HashMap which contains the feature index
+	 *  as key and the best threshold value for the feature as value.
+	 * @param leftSideDPForFeaturesBestThreshold	: HashMap which contains the feature
+	 * index as key and the Possible Data Points of the given node's left child if the node 
+	 * is split by the feature.
+	 * @param rightSideDPForFeatureBestThreshold	: HashMap which contains the feature
+	 * index as key and the Possible Data Points of the given node's right child if the node 
+	 * is split by the feature.
+	 */
 	public void createChildNodes(Node node,ArrayList<Feature> features, 
 			HashMap<Integer,Double> infoGainPerFeatureBestThreshold,
 			HashMap<Integer,Integer> bestThresholdIndexPerFeature,
@@ -523,6 +597,7 @@ public class DecisionTree{
 		
 		Double higherstInfoGain = 0d;
 		Integer bestFeatureIndex = 0;
+		
 		Iterator<Entry<Integer, Double>> infoGainIterator = 
 				infoGainPerFeatureBestThreshold.entrySet().iterator();
 		Double maxValue = Double.NEGATIVE_INFINITY;
@@ -580,7 +655,8 @@ public class DecisionTree{
 				//System.out.println(rightNode.getDataPoints().toString());
 				rightNode.setParentNode(node);
 				
-				HashMap<String,Object> entropyMap = calculateEntropy(rightNode.getDataPoints(), dataMatrix);
+				HashMap<String,Object> entropyMap = 
+						calculateEntropy(rightNode.getDataPoints(), dataMatrix);
 				rightNode.setEntropy((Double)entropyMap.get(Constant.ENTROPY));
 				rightNode.setLabelValue(
 						((Integer)entropyMap.get(Constant.SPAM_COUNT) > 
@@ -595,9 +671,9 @@ public class DecisionTree{
 	}
 	
 	/**
-	 * This method print the important information of the given Regression Tree
+	 * This method print the important information of the given Decision Tree
 	 * Node
-	 * @param node : Regression Tree Root Node
+	 * @param node : Decision Tree Root Node
 	 */
 	public void printDecisionTree(Node rootNode){
 		
@@ -615,7 +691,8 @@ public class DecisionTree{
 			System.out.printf("%30s\t\t\t:\t%f\n","Feature Threshold Value",node.getThresholdValue());
 			System.out.printf("%30s\t\t\t:\t%f\n","Label Value",node.getLabelValue());
 			System.out.printf("%30s\t\t\t:\t%f\n","Parent Node number",Math.floor(count/2));
-			System.out.printf("%30s\t\t\t:\t%d\n\n","Number of Data Points",node.getDataPoints().size());
+			System.out.printf("%30s\t\t\t:\t%d\n\n",
+			"Number of Data Points",node.getDataPoints().size());
 			*/
 			
 			if(node.getLeftChildNode() != null){
@@ -629,12 +706,15 @@ public class DecisionTree{
 	}
 	
 	/**
-	 * This method evaluates the generated Regression Tree Model 
-	 * based upon the Test Dataset.
+	 * This method evaluates the generated Decision Tree Model 
+	 * based upon the Test Data set.
 	 * 
-	 * It calculates the Mean Standard Error as the measurement of 
-	 * accuracy. 
+	 * @param testDataMatrix 	: The test Data Matrix
+	 * @param rootNode			: The root node of Decision Tree	
+	 * @return The accuracy of the Decision tree based upon the prediction
+	 * on the test Data Matrix.
 	 */
+	
 	public Double evaluateTestDataSet(Matrix testDataMatrix,Node rootNode){
 		
 		double testDataArray[][] = testDataMatrix.getArray();
@@ -652,12 +732,13 @@ public class DecisionTree{
 		return accuracy;
 		
 	}
-	
+
 	/**
 	 * 
-	 * @param dataValue : The feature values and target value of the Data Point
-	 * @return the standard error of the predicted value and the target
-	 * value of the given Data Point.
+	 * @param dataValue : The single Data Point from the test Data Matrix.
+	 * @param rootNode	: The root Node of the Decision Tree
+	 * @return			: 1 if the given decision tree can predict the target
+	 * value of the given data point correctly otherwise return 0
 	 */
 	public Integer validatePredictionValue(double dataValue[],Node rootNode){
 		
@@ -678,7 +759,8 @@ public class DecisionTree{
 			}else{
 				double actualTargetValue = dataValue[Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX];
 				double predictedTargetValue = node.getLabelValue();
-				//System.out.println("Actual value : "+ actualTargetValue + " Predicted value :"+predictedTargetValue);
+				//System.out.println("Actual value : "+ actualTargetValue 
+				//	+ " Predicted value :"+predictedTargetValue);
 				if(actualTargetValue == predictedTargetValue){
 					return 1;
 				}
