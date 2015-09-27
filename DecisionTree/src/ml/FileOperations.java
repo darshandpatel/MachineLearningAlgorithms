@@ -19,8 +19,12 @@ public class FileOperations {
 	
 	/**
 	 * 
-	 * @return The matrix which rows represent the DataPoints (line in the file)
-	 *  and which columns represent the feature values. 
+	 * @param filePath	: Path of a source file
+	 * @param fileName	: Source file
+	 * @param numOfDP	: Number of data points inside the file
+	 * @param numOfAttribute	: Number of attribute inside the file
+	 * @param splitOperator		: The regular expression for the line split
+	 * @return a matrix which contains the attribute and target values
 	 */
 	public Matrix fetchDataPointsFromFile(String filePath,String fileName,Integer numOfDP,
 			Integer numOfAttribute,String splitOperator){
