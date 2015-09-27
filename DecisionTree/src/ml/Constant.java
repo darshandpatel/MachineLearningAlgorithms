@@ -34,11 +34,11 @@ public class Constant {
 	public static Integer HOUSING_DATA_NUM_OF_TESTING_DP = 74;
 	public static Integer HOUSING_DATA_TARGET_VALUE_INDEX = 13;
 	
-	public static Double HOUSING_DATA_INFO_GAIN_THRESHOLD = 6000d;
-	public static Double HOUSING_DATA_VARIANCE_THRESHOLD = 1d;
+	public static Double HOUSING_DATA_INFO_GAIN_THRESHOLD = 2500d;
 	
 	public static Integer HOUSING_DATA_DEPTH_LIMIT = 10;
 	public static Double HOUSING_DATA_ERROR_THRESHOLD = 1000d;
+	public static Integer HOUSING_DATA_NUM_OF_CHILD_THRESHOLD = 15;
 	
 	//HOUSING DATA SET CONSTANT ENDS
 	

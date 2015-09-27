@@ -77,23 +77,23 @@ public class BasicRegressionTree {
 			//System.out.println("##############################");
 			//System.out.println("Parent node Data Points are	:" + 
 			//currentNode.getDataPoints().size());
-			//System.out.println("Parent node error is 		:"+currentNode.getError());
+			System.out.println("Parent node error is 		:"+currentNode.getError());
 			
 			splitNodeByBestFeaturethreshold(currentNode);
 			
 			if(currentNode.getLeftChildNode() != null){
 				
 				Node leftNode = currentNode.getLeftChildNode();
-				if(leftNode.getError() > Constant.HOUSING_DATA_ERROR_THRESHOLD)
-					nodeQueue.add(currentNode.getLeftChildNode());
-				
+				if( (leftNode.getError() > Constant.HOUSING_DATA_ERROR_THRESHOLD) &&
+						leftNode.getDataPoints().size() > Constant.HOUSING_DATA_NUM_OF_CHILD_THRESHOLD)
+					nodeQueue.add(leftNode);
 			}
 			if(currentNode.getRightChildNode() != null){
 				
 				Node rightNode = currentNode.getRightChildNode();
-				if(rightNode.getError() > Constant.HOUSING_DATA_ERROR_THRESHOLD)
-					nodeQueue.add(currentNode.getRightChildNode());
-				
+				if((rightNode.getError() > Constant.HOUSING_DATA_ERROR_THRESHOLD) &&
+						rightNode.getDataPoints().size() > Constant.HOUSING_DATA_NUM_OF_CHILD_THRESHOLD)
+					nodeQueue.add(rightNode);
 			}
 		}
 	}
