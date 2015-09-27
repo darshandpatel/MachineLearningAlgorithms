@@ -12,6 +12,7 @@ public class Constant {
 	public static String NUMERIC = "NUMERIC";
 	public static String BINARY_NUM = "BINARY-NUM";
 	public static String BINARY_CAT = "BINARY-CAT";
+	public static String STRING_REGEX = "\\s+";
 	
 	public static ArrayList<String> FEATURE_TYPES = new ArrayList<String>(
 			Arrays.asList(CATEGORICAL,NUMERIC,BINARY_NUM,BINARY_CAT));
@@ -30,14 +31,14 @@ public class Constant {
 	
 	public static Integer HOUSING_DATA_NUM_OF_FEATURES = 13;
 	public static Integer HOUSING_DATA_NUM_OF_TRAINING_DP = 433;
-	public static Integer HOUSING_DATA_NUM_OF_TESTING_DP = 433;
+	public static Integer HOUSING_DATA_NUM_OF_TESTING_DP = 74;
 	public static Integer HOUSING_DATA_TARGET_VALUE_INDEX = 13;
 	
-	public static Double HOUSING_DATA_INFO_GAIN_THRESHOLD = 1d;
+	public static Double HOUSING_DATA_INFO_GAIN_THRESHOLD = 6000d;
 	public static Double HOUSING_DATA_VARIANCE_THRESHOLD = 1d;
 	
 	public static Integer HOUSING_DATA_DEPTH_LIMIT = 10;
-	public static Double HOUSING_DATA_ERROR_THRESHOLD = 0.1d;
+	public static Double HOUSING_DATA_ERROR_THRESHOLD = 1000d;
 	
 	//HOUSING DATA SET CONSTANT ENDS
 	

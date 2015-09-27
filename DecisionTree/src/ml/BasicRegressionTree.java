@@ -46,8 +46,8 @@ public class BasicRegressionTree {
 		fileOperations =  new FileOperations();
 		dataMatrix =  fileOperations.fetchDataPointsFromFile(
 				Constant.HOUSING_DATA_FILE_PATH,Constant.HOUSING_TRAINDATA_FILE,
-				Constant.HOUSING_DATA_NUM_OF_TESTING_DP,Constant.HOUSING_DATA_NO_OF_FEATURES,
-				"\\s+");
+				Constant.HOUSING_DATA_NUM_OF_TRAINING_DP,Constant.HOUSING_DATA_NO_OF_FEATURES+1,
+				Constant.STRING_REGEX);
 		
 		// Create the root node for Regression Tree and add into Queue
 		Node rootNode = new Node();
@@ -609,18 +609,18 @@ public class BasicRegressionTree {
 	public void evaluateTestDataSet(){
 		
 		Matrix dataMatrix =  fileOperations.fetchDataPointsFromFile(
-				Constant.HOUSING_DATA_FILE_PATH,Constant.HOUSING_TRAINDATA_FILE,
-				Constant.HOUSING_DATA_NUM_OF_TESTING_DP,Constant.HOUSING_DATA_NO_OF_FEATURES,
-				"\\s+");
+				Constant.HOUSING_DATA_FILE_PATH,Constant.HOUSING_TESTDATA_FILE,
+				Constant.HOUSING_DATA_NUM_OF_TESTING_DP,Constant.HOUSING_DATA_NO_OF_FEATURES+1,
+				Constant.STRING_REGEX);
 		double dataArray[][] = dataMatrix.getArray();
 		
 		Double standardError = 0d;
-		for(int i=0;i< Constant.HOUSING_DATA_NUM_OF_TRAINING_DP;i++){
+		for(int i=0;i< Constant.HOUSING_DATA_NUM_OF_TESTING_DP;i++){
 			standardError += calculateSEOfPredictedValue(dataArray[i]);
 		}
 		
 		System.out.println("Mean Standard Error :" + (standardError/
-				Constant.HOUSING_DATA_NUM_OF_TRAINING_DP));
+				Constant.HOUSING_DATA_NUM_OF_TESTING_DP));
 		
 	}
 	
@@ -649,7 +649,7 @@ public class BasicRegressionTree {
 			}else{
 				Double actualTargetValue = dataValue[Constant.HOUSING_DATA_TARGET_VALUE_INDEX];
 				Double predictedTargetValue = node.getLabelValue();
-				System.out.printf("%s\t%f\n%s\t%f\n","Actual Value",actualTargetValue,"Predicted Value",predictedTargetValue);
+				System.out.printf("%s\t%f %s\t%f\n","Actual Value",actualTargetValue,"Predicted Value",predictedTargetValue);
 				return Math.pow(actualTargetValue-predictedTargetValue,2);
 			}
 		}

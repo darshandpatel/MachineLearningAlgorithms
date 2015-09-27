@@ -22,10 +22,10 @@ public class FileOperations {
 	 * @return The matrix which rows represent the DataPoints (line in the file)
 	 *  and which columns represent the feature values. 
 	 */
-	public Matrix fetchDataPointsFromFile(String filePath,String fileName,Integer numOfTrainDP,
+	public Matrix fetchDataPointsFromFile(String filePath,String fileName,Integer numOfDP,
 			Integer numOfAttribute,String splitOperator){
 		
-		double dataPoints[][] = new double[numOfTrainDP][numOfAttribute];
+		double dataPoints[][] = new double[numOfDP][numOfAttribute];
 		try{
 			
 			Path trainFilepath = Paths.get(filePath,fileName);
@@ -34,11 +34,13 @@ public class FileOperations {
 				Iterator<String> lineIterator = lines.iterator();
 				while(lineIterator.hasNext()){
 					String line = lineIterator.next();
-					String parts[] = line.trim().split(splitOperator);
-					for(int i=0;i<parts.length;i++){
-						dataPoints[lineCounter][i] = Double.parseDouble(parts[i]);
+					if(!line.equals("")){
+						String parts[] = line.trim().split(splitOperator);
+						for(int i=0;i<parts.length;i++){
+							dataPoints[lineCounter][i] = Double.parseDouble(parts[i]);
+						}
+						lineCounter++;
 					}
-					lineCounter++;
 				}
 			}
 			
