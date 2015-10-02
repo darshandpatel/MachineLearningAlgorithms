@@ -13,6 +13,7 @@ public class Constant {
 	public static String BINARY_NUM = "BINARY-NUM";
 	public static String BINARY_CAT = "BINARY-CAT";
 	public static String STRING_REGEX = "\\s+";
+	public static String COMMA_REGEX = ",";
 	
 	public static ArrayList<String> FEATURE_TYPES = new ArrayList<String>(
 			Arrays.asList(CATEGORICAL,NUMERIC,BINARY_NUM,BINARY_CAT));

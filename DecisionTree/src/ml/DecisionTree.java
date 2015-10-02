@@ -35,7 +35,7 @@ public class DecisionTree{
 		dataMatrix =  fileOperations.fetchDataPointsFromFile(
 				Constant.SPAMBASE_DATA_FILE_PATH,Constant.SPAMBASE_DATA_FILE_NAME,
 				Constant.SPAMBASE_DATA_NUM_OF_DP,Constant.SPAMBASE_DATA_NUM_OF_FEATURES + 1
-				,",");
+				,Constant.COMMA_REGEX);
 		
 	}
 	
@@ -58,7 +58,7 @@ public class DecisionTree{
 			
 			// Form Decision Tree
 			System.out.println("===============================");
-			System.out.println("Fold count : "+currentFoldCount);
+			System.out.println("Fold count : " + currentFoldCount);
 			
 			HashMap<String,Matrix> matrixHashMap = formDataMatrixByFold(numOfFolds,currentFoldCount);
 			Matrix trainDataMatrix = matrixHashMap.get(Constant.TRAIN);
