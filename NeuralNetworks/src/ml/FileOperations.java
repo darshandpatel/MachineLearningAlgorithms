@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.stream.Stream;
@@ -13,20 +14,21 @@ import Jama.Matrix;
 public class FileOperations {
 	
 	
-	/**
-	 * 
-	 * @param filePath	: Path of a source file
-	 * @param fileName	: Source file name
-	 * @param numOfDP	: Number of data points inside the file
-	 * @param numOfAttribute	: Number of attribute inside the file
-	 * @param splitOperator		: The regular expression for the line split
-	 * @return a matrix which contains the attribute and target values
-	 */
-	public HashMap<String,Matrix> fetchDataPointsFromFile(String filePath,String fileName,
+	public HashMap<String,Object> fetchDataPointsFromFile(String filePath,String fileName,
 			Integer numOfDP,Integer numOfAttribute,String splitOperator){
 		
 		double attributeValues[][] = new double[numOfDP][numOfAttribute+1];
 		double targetValues[][] = new double[numOfDP][1];
+		
+		HashMap<Integer,HashMap<String,Double>> featureMinMaxMap = 
+				new HashMap<Integer,HashMap<String,Double>>();
+		
+		for(int i = 0 ; i < Constant.PERCEPTRON_NO_OF_FEATURES ; i++){
+			HashMap<String,Double> minMaxMap = new HashMap<String,Double>();
+			minMaxMap.put(Constant.MIN, Double.POSITIVE_INFINITY);
+			minMaxMap.put(Constant.MAX, Double.NEGATIVE_INFINITY);
+			featureMinMaxMap.put(i+1,minMaxMap);
+		}
 		
 		try{
 			
@@ -42,7 +44,16 @@ public class FileOperations {
 						attributeValues[lineCounter][0] = 1;
 						int targetValueIndex = parts.length -1;
 						for(int i=0;i<targetValueIndex;i++){
-							attributeValues[lineCounter][i+1] = Double.parseDouble(parts[i]);
+							Double attributeValue = Double.parseDouble(parts[i]);
+							attributeValues[lineCounter][i+1] = attributeValue;
+							
+							// Update Min and Max value
+							HashMap<String,Double> minMaxMap = featureMinMaxMap.get(i+1);
+							
+							if(attributeValue < minMaxMap.get(Constant.MIN))
+								minMaxMap.put(Constant.MIN,attributeValue);
+							if(attributeValue > minMaxMap.get(Constant.MAX))
+								minMaxMap.put(Constant.MAX,attributeValue);
 						}
 						targetValues[lineCounter][0] = Double.parseDouble(parts[targetValueIndex]);
 						lineCounter++;
@@ -53,9 +64,11 @@ public class FileOperations {
 		}catch(IOException e){
 			System.out.println(e.getMessage());
 		}
-		HashMap<String,Matrix> matrixHashMap = new HashMap<String,Matrix>();
+		HashMap<String,Object> matrixHashMap = new HashMap<String,Object>();
 		matrixHashMap.put(Constant.ATTRIBUTES, new Matrix(attributeValues));
 		matrixHashMap.put(Constant.TARGET, new Matrix(targetValues));
+		matrixHashMap.put(Constant.MIN_MAX_MAP,featureMinMaxMap);
+		
 		return matrixHashMap;
 	}
 
