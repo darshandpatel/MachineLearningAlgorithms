@@ -31,6 +31,6 @@ public class Constant {
 	
 	public static Integer PERCEPTRON_DATA_NUM_OF_DP = 1000;
 	public static Integer PERCEPTRON_DATA_TARGET_VALUE_INDEX = 4;
-	public static Double LEARNING_RATE = 0.5d;
+	public static Double LEARNING_RATE = 0.6d;
 	
 }

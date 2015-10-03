@@ -2,7 +2,6 @@ package ml;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-
 import Jama.Matrix;
 
 public class Perceptron {
@@ -10,6 +9,12 @@ public class Perceptron {
 	HashMap<String,Object> dataMatrix;
 	FileOperations fileOperations;
 	
+	/**
+	 * Perceptron Constructor
+	 * 
+	 * This constructor fetches the Attribute and Matrix data from the source file
+	 * 
+	 */
 	public Perceptron(){
 		fileOperations = new FileOperations();
 		dataMatrix = fileOperations.fetchDataPointsFromFile(Constant.PERCEPTRON_DATA_FILE_PATH, 
@@ -17,49 +22,10 @@ public class Perceptron {
 				Constant.PERCEPTRON_NO_OF_FEATURES, Constant.STRING_REGEX);
 	}
 	
-	public Matrix normalizeUpdateAttribute(Matrix attributeMatrix,
-			Matrix targetMatrix,
-			HashMap<Integer,HashMap<String,Double>> featureMinMaxMap){
-		
-		
-		int noOfRows = attributeMatrix.getRowDimension();
-		int noOfColumns = attributeMatrix.getColumnDimension();
-		double[][] updatedttributeValues = new double[noOfRows][noOfColumns];
-		
-		for(int i = 0 ; i < noOfRows ; i++ ){
-			
-			updatedttributeValues[i][0] = 1;
-			Double targetValue = targetMatrix.get(i, 0);
-			for(int j = 1; j < noOfColumns; j++){
-				
-				Double multiplier = 1d;
-				
-				if(targetValue == -1d){
-					multiplier = -1d;
-				}
-				
-				HashMap<String,Double> minMaxMap = featureMinMaxMap.get(j);
-				
-				updatedttributeValues[i][j] = (multiplier) *((attributeMatrix.get(i, j) - 
-						minMaxMap.get(Constant.MIN)) / 
-						(minMaxMap.get(Constant.MAX) - minMaxMap.get(Constant.MIN)));
-				
-			}
-			
-		}
-		return new Matrix(updatedttributeValues);
-	}
 	
-	Matrix generateRandomCoefficientMatrix(){
-		
-		double coefficient[][] = new double[Constant.PERCEPTRON_NO_OF_FEATURES+1][1];
-		
-		for(int i=0;i<=Constant.PERCEPTRON_NO_OF_FEATURES;i++){
-			coefficient[i][0] = Math.random();
-		}
-		return new Matrix(coefficient);
-	}
-	
+	/**
+	 * This method creates the Perceptron model of the given data.
+	 */
 	public void formPerceptron(){
 		
 		Matrix attributeMatrix = (Matrix) dataMatrix.get(Constant.ATTRIBUTES);
@@ -67,27 +33,11 @@ public class Perceptron {
 		HashMap<Integer,HashMap<String,Double>> featureMinMaxMap = 
 				(HashMap<Integer,HashMap<String,Double>>) dataMatrix.get(Constant.MIN_MAX_MAP);
 		
+		updateAttributeTargetMatrix(dataMatrix);
 		
-		System.out.println("Attribute Matrix Dimension");
-		System.out.println("Row : "+attributeMatrix.getRowDimension());
-		System.out.println("Column : "+attributeMatrix.getColumnDimension());
-		
-		System.out.println("Target Matrix Dimension");
-		System.out.println("Row : "+targetMatrix.getRowDimension());
-		System.out.println("Column : "+targetMatrix.getColumnDimension());
-		
-		Matrix updatedAttributeMatrix = normalizeUpdateAttribute(attributeMatrix,
-				targetMatrix,featureMinMaxMap);
-		
-		System.out.println("After updated Attribute Matrix Dimension");
-		System.out.println("Row : "+updatedAttributeMatrix.getRowDimension());
-		System.out.println("Column : "+updatedAttributeMatrix.getColumnDimension());
+		//printMatrix(updatedAttributeMatrix);
 		
 		Matrix coefficientMatrix = generateRandomCoefficientMatrix();
-		
-		System.out.println("Coefficient Matrix Dimension");
-		System.out.println("Row : "+coefficientMatrix.getRowDimension());
-		System.out.println("Column : "+coefficientMatrix.getColumnDimension());
 		
 		int iterationCount = 1;
 		
@@ -97,44 +47,125 @@ public class Perceptron {
 			
 			ArrayList<Integer> negativeValueDP = new ArrayList<Integer>();
 			
-			
-			// Run on every available data point
+			// Loop on every available data point
 			for(int n = 0 ; n < Constant.PERCEPTRON_DATA_NUM_OF_DP ; n++){
 				
 				//System.out.println("Data Point number "+ n);
 				
 				int row[] = {n};
-				Matrix rowMatrix = updatedAttributeMatrix.getMatrix(row,
+				Matrix rowMatrix = attributeMatrix.getMatrix(row,
 						0,Constant.PERCEPTRON_NO_OF_FEATURES);
 				
-				//System.out.println("Row Matrix. # of rows " + rowMatrix.getRowDimension()
-				//		+ " # of columns "+ rowMatrix.getColumnDimension());
+				//printMatrix(rowMatrix);
 				
 				Matrix result = rowMatrix.times(coefficientMatrix);
 				
-				//System.out.println("Result Matrix dimension # of rows "+result.getRowDimension()
-				//		+" # of columns "+result.getColumnDimension());
+				//printMatrix(result);
 				
 				if(result.get(0,0) < 0d){
+					
 					negativeValueDP.add(n);
-					
 					// Stochastic Update
-					coefficientMatrix.plus(rowMatrix.timesEquals
-							(Constant.LEARNING_RATE).transpose());
-					
+					coefficientMatrix = coefficientMatrix.plus(rowMatrix.transpose().timesEquals
+							(Constant.LEARNING_RATE));
 				}
 			}
+			
 			System.out.println("Total Mistake : " + negativeValueDP.size());
 			if(negativeValueDP.size() == 0){
 				break;
 			}
 			
-			System.out.println("Coefficient Matrix Dimension");
-			System.out.println("Row : "+coefficientMatrix.getRowDimension());
-			System.out.println("Column : "+coefficientMatrix.getColumnDimension());
+			iterationCount++;
+		}
+		
+		System.out.println("Feature Coefficient");
+		
+		printMatrix(coefficientMatrix.transpose());
+		
+	}
+	
+	/**
+	 * This methods normalize the attribute value and modifies the sign of attribute 
+	 * and target matrix data value if the target value is -1.0 
+	 * 
+	 * @param dataMatrix : The HashMap which contains the attribute, target and attribute
+	 * Min Max value Objects.
+	 * 
+	 */
+	private void updateAttributeTargetMatrix(HashMap<String,Object> dataMatrix){
+		
+		Matrix attributeMatrix = (Matrix) dataMatrix.get(Constant.ATTRIBUTES);
+		Matrix targetMatrix = (Matrix) dataMatrix.get(Constant.TARGET);
+		HashMap<Integer,HashMap<String,Double>> featureMinMaxMap = 
+				(HashMap<Integer,HashMap<String,Double>> )dataMatrix.get(Constant.MIN_MAX_MAP);
+		
+		int noOfRows = attributeMatrix.getRowDimension();
+		int noOfColumns = attributeMatrix.getColumnDimension();
+		
+		for(int i = 0 ; i < noOfRows ; i++ ){
 			
-			break;
+			Double targetValue = targetMatrix.get(i, 0);
+			
+			Double multiplier = 1d;
+			
+			if(targetValue == -1d){
+				
+				multiplier = -1d;
+				targetMatrix.set(i, 0, 1d);
+				
+				/*
+				attributeMatrix.set(i,0, -1d);
+				for(int j = 1; j < noOfColumns; j++){
+					attributeMatrix.set(i,j, (multiplier * (attributeMatrix.get(i, j))));
+				}
+				*/
+			}
+			
+			attributeMatrix.set(i,0, multiplier);
+			
+			for(int j = 1; j < noOfColumns; j++){
+				
+				HashMap<String,Double> minMaxMap = featureMinMaxMap.get(j);
+				attributeMatrix.set(i,j, (multiplier * ((attributeMatrix.get(i, j) - 
+						minMaxMap.get(Constant.MIN)) / 
+						(minMaxMap.get(Constant.MAX) - minMaxMap.get(Constant.MIN)))));
+			}
+			
 		}
 		
 	}
+	
+	/**
+	 * This method generates the random feature coefficient matrix
+	 * @return The feature coefficient matrix
+	 */
+	private Matrix generateRandomCoefficientMatrix(){
+		
+		double coefficient[][] = new double[Constant.PERCEPTRON_NO_OF_FEATURES+1][1];
+		
+		for(int i=0;i<=Constant.PERCEPTRON_NO_OF_FEATURES;i++){
+			//coefficient[i][0] = 0d;
+			coefficient[i][0] = Math.random();
+		}
+		return new Matrix(coefficient);
+	}
+	
+	/**
+	 * This method print the given Matrix
+	 * @param matrix : Data Matrix
+	 */
+	private void printMatrix(Matrix matrix){
+		
+		int noOfRows = matrix.getRowDimension();
+		int noOfColumns = matrix.getColumnDimension();
+		
+		for(int i=0; i<noOfRows ; i++){
+			for(int j=0;j<noOfColumns;j++){
+				System.out.print(matrix.get(i, j)+" ");
+			}
+			System.out.print("\n");
+		}
+	}
+
 }
