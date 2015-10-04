@@ -33,4 +33,9 @@ public class Constant {
 	public static Integer PERCEPTRON_DATA_TARGET_VALUE_INDEX = 4;
 	public static Double LEARNING_RATE = 0.6d;
 	
+	public static Integer NUM_OF_NN_LAYERS = 3;
+	public static String INPUT = "INPUT";
+	public static String OUTPUT = "OUTPUT";
+	public static Double NN_LEARNING_RATE = 0.4;
+	
 }

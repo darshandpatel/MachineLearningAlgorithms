@@ -102,7 +102,7 @@ public class Perceptron {
 		
 		int noOfRows = attributeMatrix.getRowDimension();
 		int noOfColumns = attributeMatrix.getColumnDimension();
-		
+		// Normalization method : Rescaling 
 		for(int i = 0 ; i < noOfRows ; i++ ){
 			
 			Double targetValue = targetMatrix.get(i, 0);
