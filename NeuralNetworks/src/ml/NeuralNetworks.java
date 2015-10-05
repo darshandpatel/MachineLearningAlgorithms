@@ -1,11 +1,6 @@
 package ml;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.function.Function;
 
 import Jama.Matrix;
 
@@ -49,9 +44,9 @@ public class NeuralNetworks {
 		weightMap = new HashMap<Integer,Matrix>();
 		
 		// Middle Hidden Layer Weights
-		weightMap.put(1, Matrix.random(3,8));
+		weightMap.put(0, Matrix.random(8,3));
 		// Last Layer Weights
-		weightMap.put(2, Matrix.random(8,3));
+		weightMap.put(1, Matrix.random(3,8));
 		
 	}
 	
@@ -74,8 +69,9 @@ public class NeuralNetworks {
 		int noOfInputDataColumn = inputMatrix.getColumnDimension();
 		
 		int loopCount = 1;
-		
-		while(true){
+		printWeights();
+		printBias();
+		while(loopCount <= 50000){
 			
 			System.out.println("Loop count :" + loopCount);
 			HashMap<Integer,HashMap<String,Matrix>> inputOutputMatrixByLayer 
@@ -83,111 +79,32 @@ public class NeuralNetworks {
 			
 			for(int i = 0; i < noOfInputDataRow; i++){
 				
+				errorMap.clear();
+				
 				// Calculate the Input and Output for all units 
 				int row[] = {i};
 				
 				Matrix target = targetMatrix.getMatrix(row, 0, noOfInputDataColumn-1);
 				Matrix input = inputMatrix.getMatrix(row, 0, noOfInputDataColumn-1);
-
-				Matrix output = (Matrix) input.clone();
 				
-				HashMap<String,Matrix> inputOutputMap = new HashMap<String,Matrix>();
-				inputOutputMap.put(Constant.INPUT, input);
-				inputOutputMap.put(Constant.OUTPUT, output);
-				
-				inputOutputMatrixByLayer.put(0, inputOutputMap);
-				
-				for(int k = 1 ; k < Constant.NUM_OF_NN_LAYERS; k++){
-					
-					inputOutputMap = new HashMap<String,Matrix>();
-					
-					// Calculate the input values of a unit by multiplying weight factor with previous layer
-					// output values.
-					Matrix previousLayerOutputMatrix = 
-							inputOutputMatrixByLayer.get(k-1).get(Constant.OUTPUT);
-					Matrix calculatedInputMatrix = 
-							previousLayerOutputMatrix.times(weightMap.get(k).transpose()).plus(biasMap.get(k));
-					
-					inputOutputMap.put(Constant.INPUT, calculatedInputMatrix);
-					
-					// Calculate the output of the current unit
-					inputOutputMap.put(Constant.OUTPUT, applySigmoidMapFunction(calculatedInputMatrix));
-					
-					inputOutputMatrixByLayer.put(k, inputOutputMap);
-					
-				}
-				
-				errorMap.clear();
-				Matrix outputMatrix;
+				inputOutputMatrixByLayer = formInputOutputs(input);
 				
 				// Calculate the error for all units at last layer
-				
-				int maxUnits = unitsByLayer.get(Constant.NUM_OF_NN_LAYERS-1);
-				Matrix errorMatrix = new Matrix(1, maxUnits);
-				for(int p = 0 ; p < maxUnits;p++){
-					
-					outputMatrix = inputOutputMatrixByLayer.get(Constant.NUM_OF_NN_LAYERS-1).
-							get(Constant.OUTPUT);
-					Double calculatedOutputValue = outputMatrix.get(0,p);
-					Double targetValue = target.get(0, p);
-					errorMatrix.set(0, p, (calculatedOutputValue*
-							(1-calculatedOutputValue)*(targetValue-calculatedOutputValue)));
-					
-				}
-				errorMap.put(Constant.NUM_OF_NN_LAYERS-1, errorMatrix);
-				
-				// Calculate the error for all units except first and last layer units
-				
-				for(int k = (Constant.NUM_OF_NN_LAYERS-2) ; k > 0; k--){
-					
-					maxUnits = unitsByLayer.get(k);
-					errorMatrix = new Matrix(1, maxUnits);
-					
-					Matrix previousLayerMatrix = errorMap.get(k+1).times(weightMap.get(k+1));
-					for(int p = 0 ; p < maxUnits;p++){
-						
-						outputMatrix = inputOutputMatrixByLayer.get(k).
-								get(Constant.OUTPUT);
-						Double calculatedOutputValue = outputMatrix.get(0,p);
-						errorMatrix.set(0, p, (calculatedOutputValue*(1-calculatedOutputValue)
-								*previousLayerMatrix.get(0, p)));
-						
-					}
-					errorMap.put(k, errorMatrix);
-				}
+				calculateErrors(inputOutputMatrixByLayer,target);
 				
 				// Update the weights based on error
-				Iterator<Map.Entry<Integer,Matrix>> iterator= weightMap.entrySet().iterator();
-				while(iterator.hasNext()){
-					
-					Entry<Integer,Matrix> entry = iterator.next();
-					Matrix weight = entry.getValue();
-					int layer = entry.getKey();
-					
-					int weightRow = weight.getRowDimension();
-					int weightColumn = weight.getColumnDimension();
-					
-					Matrix times = errorMap.get(layer).transpose().times(
-							inputOutputMatrixByLayer.get(layer).get(Constant.OUTPUT));
-							
-					for(int x = 0; x < weightRow;x++){
-						for(int y=0; y< weightColumn;y++){
-							
-							weight.set(x, y,(weight.get(x, y) + 
-									(Constant.NN_LEARNING_RATE*times.get(0, 0))));
-							
-						}
-					}
-					
-					Matrix bias = biasMap.get(layer);
-					bias = bias.plus(errorMap.get(layer).times(Constant.NN_LEARNING_RATE));  
-					
-				}
+				updateWeightAndBias(inputOutputMatrixByLayer);
+				
 			}
 			
 			loopCount++;
 			
 			}
+		
+		printNNResults();
+		printBias();
+		printWeights();
+		
 	}
 	
 	public Matrix applySigmoidMapFunction(Matrix input){
@@ -199,13 +116,33 @@ public class NeuralNetworks {
 		for (int i = 0; i < noOfRows; i++) {
 			for (int j = 0; j < noOfColumns; j++) {
 				
-				output[i][j]  = (double)(1 /
-						(1 + Math.pow(Math.E,(-1*input.get(i, j)))));
+				output[i][j]  = (double)(Math.pow(Math.E,input.get(i, j)) /
+						(1 + Math.pow(Math.E,input.get(i, j))));
 				
 				}
 			}
 		
 		return new Matrix(output);
+	}
+	
+	public void printBias(){
+		
+		System.out.println("Bias values");
+		for(int l = 1 ; l < Constant.NUM_OF_NN_LAYERS;l++){
+			
+			Matrix biasMatrix = biasMap.get(l);
+			int r = biasMatrix.getRowDimension();
+			int c = biasMatrix.getColumnDimension();
+			
+			for(int m=0;m<r;m++){
+				for(int n=0;n<c;n++){
+					
+					System.out.printf("%5.3f",biasMatrix.get(m, n));
+				}
+				System.out.print("\n");
+			}
+		}
+		
 	}
 	
 	/**
@@ -219,9 +156,189 @@ public class NeuralNetworks {
 		
 		for(int i=0; i<noOfRows ; i++){
 			for(int j=0;j<noOfColumns;j++){
-				System.out.print(matrix.get(i, j)+" ");
+				System.out.printf("%5.3f ",matrix.get(i, j));
 			}
 			System.out.print("\n");
+		}
+	}
+	
+	private void printWeights(){
+		
+		System.out.println("Weight Matrix");
+		for(int l = 0;l<=(Constant.NUM_OF_NN_LAYERS-2);l++){
+			
+			Matrix weight = weightMap.get(l);
+			
+			int r = weight.getRowDimension();
+			int c = weight.getColumnDimension();
+			
+			for(int m=0;m<r;m++){
+				for(int n=0;n<c;n++){
+					
+					System.out.printf("%5.3f",weight.get(m, n));
+				}
+				System.out.print("\n");
+			}
+			
+		}
+		
+	}
+	
+	private void printNNResults(){
+		
+		int noOfInputDataRow = inputMatrix.getRowDimension();
+		int noOfInputDataColumn = inputMatrix.getColumnDimension();
+		
+		
+		for(int i = 0; i < noOfInputDataRow; i++){
+			
+			System.out.println("******************************");
+			// Calculate the Input and Output for all units 
+			int row[] = {i};
+			
+			System.out.println("Input Matrix");
+			Matrix input = inputMatrix.getMatrix(row, 0, noOfInputDataColumn-1);
+			printMatrix(input);
+			
+			Matrix hiddenLayerWeight = weightMap.get(0);
+			
+			Matrix middleLayerInput = input.times(hiddenLayerWeight);
+			
+			System.out.println("Middle Layer Input");
+			printMatrix(middleLayerInput);
+			
+			Matrix middleLayerOutput = applySigmoidMapFunction(middleLayerInput);
+			
+			System.out.println("Middle Layer Output");
+			printMatrix(middleLayerOutput);
+			
+			Matrix lastLayerWeight = weightMap.get(1);
+			Matrix lastLayerInput = middleLayerOutput.times(lastLayerWeight);
+			
+			System.out.println("Last Layer Input");
+			printMatrix(lastLayerInput);
+			
+			Matrix lastLayerOutput = applySigmoidMapFunction(lastLayerInput);
+			
+			System.out.println("Last Layer Output");
+			printMatrix(lastLayerOutput);
+		}
+		
+	}
+	
+	private HashMap<Integer,HashMap<String,Matrix>> formInputOutputs(Matrix input){
+		
+		HashMap<Integer,HashMap<String,Matrix>> inputOutputMatrixByLayer 
+			= new HashMap<Integer,HashMap<String,Matrix>>();
+		
+		Matrix output = (Matrix) input.clone();
+		
+		HashMap<String,Matrix> inputOutputMap = new HashMap<String,Matrix>();
+		inputOutputMap.put(Constant.INPUT, input);
+		inputOutputMap.put(Constant.OUTPUT, output);
+		
+		inputOutputMatrixByLayer.put(0, inputOutputMap);
+		
+		for(int k = 1 ; k < Constant.NUM_OF_NN_LAYERS; k++){
+			
+			inputOutputMap = new HashMap<String,Matrix>();
+			
+			// Calculate the input values of a unit by multiplying weight factor with previous layer
+			// output values.
+			Matrix previousLayerOutputMatrix = 
+					inputOutputMatrixByLayer.get(k-1).get(Constant.OUTPUT);
+			Matrix calculatedInputMatrix = 
+					previousLayerOutputMatrix.times(weightMap.get(k-1)).plus(biasMap.get(k));
+			
+			inputOutputMap.put(Constant.INPUT, calculatedInputMatrix);
+			
+			// Calculate the output of the current unit
+			inputOutputMap.put(Constant.OUTPUT, applySigmoidMapFunction(calculatedInputMatrix));
+			
+			inputOutputMatrixByLayer.put(k, inputOutputMap);
+			
+		}
+		
+		return inputOutputMatrixByLayer;
+		
+	}
+	
+	private void calculateErrors(HashMap<Integer,HashMap<String,Matrix>> inputOutputMatrixByLayer,
+			Matrix target){
+		
+		int maxUnits = unitsByLayer.get(Constant.NUM_OF_NN_LAYERS-1);
+		Matrix errorMatrix = new Matrix(1, maxUnits);
+		Matrix lastLayerOutputMatrix = inputOutputMatrixByLayer.get(Constant.NUM_OF_NN_LAYERS-1).
+				get(Constant.OUTPUT);
+		for(int p = 0 ; p < maxUnits;p++){
+			
+			Double calculatedOutputValue = lastLayerOutputMatrix.get(0,p);
+			Double targetValue = target.get(0, p);
+			errorMatrix.set(0, p, (calculatedOutputValue*
+					(1-calculatedOutputValue)*(targetValue-calculatedOutputValue)));
+			
+		}
+		errorMap.put(Constant.NUM_OF_NN_LAYERS-1, errorMatrix);
+		
+		// Calculate the error for all units except first and last layer units
+		
+		for(int k = (Constant.NUM_OF_NN_LAYERS-2) ; k > 0; k--){
+			
+			maxUnits = unitsByLayer.get(k);
+			errorMatrix = new Matrix(1, maxUnits);
+			
+			Matrix tempMatrix = errorMap.get(k+1).times(weightMap.get(k).transpose());
+			Matrix currentLayerOutputMatrix = inputOutputMatrixByLayer.get(k).
+					get(Constant.OUTPUT);
+			
+			for(int p = 0 ; p < maxUnits;p++){
+				
+				Double calculatedOutputValue = currentLayerOutputMatrix.get(0,p);
+				errorMatrix.set(0, p, (calculatedOutputValue*(1-calculatedOutputValue)
+						* tempMatrix.get(0, p)));
+				
+			}
+			errorMap.put(k, errorMatrix);
+		}
+	}
+	
+	private void updateWeightAndBias(HashMap<Integer,HashMap<String,Matrix>> inputOutputMatrixByLayer){
+		
+		for(int l = (Constant.NUM_OF_NN_LAYERS-2);l>=0;l--){
+			
+			Matrix higherLayerErrorMatrix = errorMap.get(l+1);
+			Matrix currentLayerOutputMatrix = inputOutputMatrixByLayer.get(l).get(Constant.OUTPUT);
+			Matrix weight = weightMap.get(l);
+			
+			int r = weight.getRowDimension();
+			int c = weight.getColumnDimension();
+			
+			for(int m=0;m<r;m++){
+				for(int n=0;n<c;n++){
+					
+					Double updatedWeight = weight.get(m, n) +higherLayerErrorMatrix.get(0, n)
+							*currentLayerOutputMatrix.get(0, m)* Constant.LEARNING_RATE;
+					weight.set(m, n, updatedWeight);
+				}
+			}
+			
+		}
+		
+		for(int l = (Constant.NUM_OF_NN_LAYERS -1) ; l > 0;l--){
+			
+			Matrix biasMatrix = biasMap.get(l);
+			Matrix error = errorMap.get(l);
+			int r = biasMatrix.getRowDimension();
+			int c = biasMatrix.getColumnDimension();
+			
+			for(int m=0;m<r;m++){
+				for(int n=0;n<c;n++){
+					
+					Double updatedBias = biasMatrix.get(m, n) + 
+							(Constant.LEARNING_RATE*error.get(m, n));
+					biasMatrix.set(m, n, updatedBias);
+				}
+			}
 		}
 	}
 	
