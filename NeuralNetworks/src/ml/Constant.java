@@ -37,5 +37,6 @@ public class Constant {
 	public static String INPUT = "INPUT";
 	public static String OUTPUT = "OUTPUT";
 	public static Double NN_LEARNING_RATE = 0.4;
+	public static Double ERROR_THRESHOLD = 0.4d;
 	
 }

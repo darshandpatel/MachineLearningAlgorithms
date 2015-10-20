@@ -8,7 +8,6 @@ public class NeuralNetworks {
 	
 	HashMap<Integer,Matrix> weightMap;
 	HashMap<Integer,Matrix> biasMap;
-	HashMap<Integer,Matrix> errorMap;
 	Matrix targetMatrix;
 	Matrix inputMatrix; 
 	HashMap<Integer,Integer> unitsByLayer;
@@ -32,7 +31,6 @@ public class NeuralNetworks {
 		unitsByLayer.put(1, 3);
 		unitsByLayer.put(2, 8);
 		
-		errorMap = new HashMap<Integer,Matrix>();
 		generateRandomWeights();
 		generateBias();
 		
@@ -69,17 +67,19 @@ public class NeuralNetworks {
 		int noOfInputDataColumn = inputMatrix.getColumnDimension();
 		
 		int loopCount = 1;
+		
 		printWeights();
 		printBias();
-		while(loopCount <= 50000){
+		
+		HashMap<Integer,HashMap<String,Matrix>> inputOutputMatrixByLayer = null;
+		HashMap<Integer,Matrix> errorMatrixByLayer = null;
+		Matrix finalLayerOutputMatrix = null;
+		
+		do{
 			
 			System.out.println("Loop count :" + loopCount);
-			HashMap<Integer,HashMap<String,Matrix>> inputOutputMatrixByLayer 
-				= new HashMap<Integer,HashMap<String,Matrix>>();
 			
 			for(int i = 0; i < noOfInputDataRow; i++){
-				
-				errorMap.clear();
 				
 				// Calculate the Input and Output for all units 
 				int row[] = {i};
@@ -87,19 +87,20 @@ public class NeuralNetworks {
 				Matrix target = targetMatrix.getMatrix(row, 0, noOfInputDataColumn-1);
 				Matrix input = inputMatrix.getMatrix(row, 0, noOfInputDataColumn-1);
 				
-				inputOutputMatrixByLayer = formInputOutputs(input);
+				inputOutputMatrixByLayer = formInputOutputsByLayers(input);
 				
 				// Calculate the error for all units at last layer
-				calculateErrors(inputOutputMatrixByLayer,target);
+				errorMatrixByLayer = calculateErrors(inputOutputMatrixByLayer,target);
 				
 				// Update the weights based on error
-				updateWeightAndBias(inputOutputMatrixByLayer);
+				updateWeightAndBias(inputOutputMatrixByLayer,errorMatrixByLayer);
 				
 			}
 			
+			finalLayerOutputMatrix = inputOutputMatrixByLayer.get(Constant.NUM_OF_NN_LAYERS-1).get(Constant.OUTPUT);
 			loopCount++;
 			
-			}
+		}while(calculatePredictionError(finalLayerOutputMatrix) > Constant.ERROR_THRESHOLD);
 		
 		printNNResults();
 		printBias();
@@ -226,18 +227,22 @@ public class NeuralNetworks {
 		
 	}
 	
-	private HashMap<Integer,HashMap<String,Matrix>> formInputOutputs(Matrix input){
+	private HashMap<Integer,HashMap<String,Matrix>> formInputOutputsByLayers(Matrix input){
 		
 		HashMap<Integer,HashMap<String,Matrix>> inputOutputMatrixByLayer 
 			= new HashMap<Integer,HashMap<String,Matrix>>();
 		
+		// First layer out matrix is same as the input matrix
 		Matrix output = (Matrix) input.clone();
 		
+		// Create the HashMap for the first layer Input Output Matrix
 		HashMap<String,Matrix> inputOutputMap = new HashMap<String,Matrix>();
 		inputOutputMap.put(Constant.INPUT, input);
 		inputOutputMap.put(Constant.OUTPUT, output);
 		
 		inputOutputMatrixByLayer.put(0, inputOutputMap);
+		
+		//Calculate the Input and Output matrix for the layers except the first layer.
 		
 		for(int k = 1 ; k < Constant.NUM_OF_NN_LAYERS; k++){
 			
@@ -263,13 +268,18 @@ public class NeuralNetworks {
 		
 	}
 	
-	private void calculateErrors(HashMap<Integer,HashMap<String,Matrix>> inputOutputMatrixByLayer,
+	private HashMap<Integer,Matrix> calculateErrors(
+			HashMap<Integer,HashMap<String,Matrix>> inputOutputMatrixByLayer,
 			Matrix target){
 		
+		HashMap<Integer,Matrix> errorMatrixByLayer = new HashMap<Integer,Matrix>();
+		
 		int maxUnits = unitsByLayer.get(Constant.NUM_OF_NN_LAYERS-1);
+		
 		Matrix errorMatrix = new Matrix(1, maxUnits);
 		Matrix lastLayerOutputMatrix = inputOutputMatrixByLayer.get(Constant.NUM_OF_NN_LAYERS-1).
 				get(Constant.OUTPUT);
+		
 		for(int p = 0 ; p < maxUnits;p++){
 			
 			Double calculatedOutputValue = lastLayerOutputMatrix.get(0,p);
@@ -278,7 +288,7 @@ public class NeuralNetworks {
 					(1-calculatedOutputValue)*(targetValue-calculatedOutputValue)));
 			
 		}
-		errorMap.put(Constant.NUM_OF_NN_LAYERS-1, errorMatrix);
+		errorMatrixByLayer.put(Constant.NUM_OF_NN_LAYERS-1, errorMatrix);
 		
 		// Calculate the error for all units except first and last layer units
 		
@@ -287,7 +297,7 @@ public class NeuralNetworks {
 			maxUnits = unitsByLayer.get(k);
 			errorMatrix = new Matrix(1, maxUnits);
 			
-			Matrix tempMatrix = errorMap.get(k+1).times(weightMap.get(k).transpose());
+			Matrix tempMatrix = errorMatrixByLayer.get(k+1).times(weightMap.get(k).transpose());
 			Matrix currentLayerOutputMatrix = inputOutputMatrixByLayer.get(k).
 					get(Constant.OUTPUT);
 			
@@ -298,48 +308,80 @@ public class NeuralNetworks {
 						* tempMatrix.get(0, p)));
 				
 			}
-			errorMap.put(k, errorMatrix);
+			errorMatrixByLayer.put(k, errorMatrix);
 		}
+		
+		return errorMatrixByLayer;
 	}
 	
-	private void updateWeightAndBias(HashMap<Integer,HashMap<String,Matrix>> inputOutputMatrixByLayer){
+	
+	
+	private void updateWeightAndBias(HashMap<Integer,HashMap<String,Matrix>> 
+	inputOutputMatrixByLayer, HashMap<Integer,Matrix> errorMatrixByLayer){
 		
-		for(int l = (Constant.NUM_OF_NN_LAYERS-2);l>=0;l--){
+		for(int l = 0;l<(Constant.NUM_OF_NN_LAYERS-1);l++){
 			
-			Matrix higherLayerErrorMatrix = errorMap.get(l+1);
+			Matrix higherLayerErrorMatrix = errorMatrixByLayer.get(l+1);
 			Matrix currentLayerOutputMatrix = inputOutputMatrixByLayer.get(l).get(Constant.OUTPUT);
+			
 			Matrix weight = weightMap.get(l);
 			
 			int r = weight.getRowDimension();
 			int c = weight.getColumnDimension();
 			
+			double newWeight[][] = new double[r][c];
+			
+			Double updatedWeight = 0d;
 			for(int m=0;m<r;m++){
 				for(int n=0;n<c;n++){
 					
-					Double updatedWeight = weight.get(m, n) +higherLayerErrorMatrix.get(0, n)
-							*currentLayerOutputMatrix.get(0, m)* Constant.LEARNING_RATE;
-					weight.set(m, n, updatedWeight);
+					updatedWeight = weight.get(m, n) + ( higherLayerErrorMatrix.get(0, n)
+							* currentLayerOutputMatrix.get(0, m) * Constant.LEARNING_RATE);
+					
+					newWeight[m][n] = updatedWeight;
 				}
 			}
 			
+			weightMap.put(l, new Matrix(newWeight));
 		}
 		
-		for(int l = (Constant.NUM_OF_NN_LAYERS -1) ; l > 0;l--){
+		for(int l = 1 ; l < Constant.NUM_OF_NN_LAYERS;l++){
 			
 			Matrix biasMatrix = biasMap.get(l);
-			Matrix error = errorMap.get(l);
+			Matrix error = errorMatrixByLayer.get(l);
+			
 			int r = biasMatrix.getRowDimension();
 			int c = biasMatrix.getColumnDimension();
 			
+			double newBias[][] = new double[r][c];
+			
+			Double updatedBias = 0d;
+			
 			for(int m=0;m<r;m++){
 				for(int n=0;n<c;n++){
 					
-					Double updatedBias = biasMatrix.get(m, n) + 
-							(Constant.LEARNING_RATE*error.get(m, n));
-					biasMatrix.set(m, n, updatedBias);
+					updatedBias = biasMatrix.get(m, n) + 
+							(Constant.LEARNING_RATE * error.get(m, n));
+					newBias[m][n]= updatedBias;
 				}
 			}
 		}
+	}
+	
+	
+	private Double calculatePredictionError(Matrix finalLayerOutput){
+		
+		int totalUnits = finalLayerOutput.getColumnDimension();
+		
+		double totalError = 0d;
+		
+		for(int i = 0 ; i < totalUnits ; i++){
+			
+			totalError += Math.pow((finalLayerOutput.get(0, i) - targetMatrix.get(0,i)),2)/2;
+			
+		}
+		
+		return totalError;
 	}
 	
 }
