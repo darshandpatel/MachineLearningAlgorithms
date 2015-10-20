@@ -1,6 +1,8 @@
 package ml;
 
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map.Entry;
 
 import Jama.Matrix;
 
@@ -36,19 +38,24 @@ public class NeuralNetworks {
 		
 	}
 	
-	
+	/**
+	 * This method generates the random Weight Matrix
+	 */
 	public void generateRandomWeights(){
 		
 		weightMap = new HashMap<Integer,Matrix>();
 		
-		// Middle Hidden Layer Weights
+		// Initial to Middle Layer weight
 		weightMap.put(0, Matrix.random(8,3));
-		// Last Layer Weights
+		// Middle to Last Layer weight
 		weightMap.put(1, Matrix.random(3,8));
 		
 	}
 	
 	
+	/**
+	 * This method generates the random Bias Matrix
+	 */
 	public void generateBias(){
 		
 		biasMap = new HashMap<Integer,Matrix>();
@@ -60,7 +67,9 @@ public class NeuralNetworks {
 		
 	}
 	
-	
+	/*
+	 * The method forms the Neural Network for the Auto Encoder Problem
+	 */
 	public void formNeuralNetwork(){
 		
 		int noOfInputDataRow = inputMatrix.getRowDimension();
@@ -74,7 +83,7 @@ public class NeuralNetworks {
 		HashMap<Integer,HashMap<String,Matrix>> inputOutputMatrixByLayer = null;
 		HashMap<Integer,Matrix> errorMatrixByLayer = null;
 		Matrix finalLayerOutputMatrix = null;
-		
+		double predictionError = 1d;
 		do{
 			
 			System.out.println("Loop count :" + loopCount);
@@ -87,20 +96,37 @@ public class NeuralNetworks {
 				Matrix target = targetMatrix.getMatrix(row, 0, noOfInputDataColumn-1);
 				Matrix input = inputMatrix.getMatrix(row, 0, noOfInputDataColumn-1);
 				
+				//System.out.println("Input Matrix");
+				//printMatrix(input);
+				
+				//System.out.println("Target Matrix");
+				//printMatrix(target);
+				
 				inputOutputMatrixByLayer = formInputOutputsByLayers(input);
+				
+				//printInputOutputHashMap(inputOutputMatrixByLayer);
 				
 				// Calculate the error for all units at last layer
 				errorMatrixByLayer = calculateErrors(inputOutputMatrixByLayer,target);
 				
+				//printErrorMatrix(errorMatrixByLayer);
+				
 				// Update the weights based on error
 				updateWeightAndBias(inputOutputMatrixByLayer,errorMatrixByLayer);
 				
+				//System.out.println("Updated Weights");
+				//printWeights();
+				
+				//System.out.println("Updated Bias");
+				//printBias();
 			}
 			
 			finalLayerOutputMatrix = inputOutputMatrixByLayer.get(Constant.NUM_OF_NN_LAYERS-1).get(Constant.OUTPUT);
 			loopCount++;
+			predictionError = calculatePredictionError(finalLayerOutputMatrix);
+			System.out.println("Prediction Error " + predictionError);
 			
-		}while(calculatePredictionError(finalLayerOutputMatrix) > Constant.ERROR_THRESHOLD);
+		}while(predictionError > Constant.ERROR_THRESHOLD);
 		
 		printNNResults();
 		printBias();
@@ -138,7 +164,7 @@ public class NeuralNetworks {
 			for(int m=0;m<r;m++){
 				for(int n=0;n<c;n++){
 					
-					System.out.printf("%5.3f",biasMatrix.get(m, n));
+					System.out.printf("%5.8f",biasMatrix.get(m, n));
 				}
 				System.out.print("\n");
 			}
@@ -157,7 +183,7 @@ public class NeuralNetworks {
 		
 		for(int i=0; i<noOfRows ; i++){
 			for(int j=0;j<noOfColumns;j++){
-				System.out.printf("%5.3f ",matrix.get(i, j));
+				System.out.printf("%5.8f ",matrix.get(i, j));
 			}
 			System.out.print("\n");
 		}
@@ -176,7 +202,7 @@ public class NeuralNetworks {
 			for(int m=0;m<r;m++){
 				for(int n=0;n<c;n++){
 					
-					System.out.printf("%5.3f",weight.get(m, n));
+					System.out.printf("%5.8f",weight.get(m, n));
 				}
 				System.out.print("\n");
 			}
@@ -335,8 +361,8 @@ public class NeuralNetworks {
 			for(int m=0;m<r;m++){
 				for(int n=0;n<c;n++){
 					
-					updatedWeight = weight.get(m, n) + ( higherLayerErrorMatrix.get(0, n)
-							* currentLayerOutputMatrix.get(0, m) * Constant.LEARNING_RATE);
+					updatedWeight = weight.get(m, n) + (double)(higherLayerErrorMatrix.get(0, n)
+							* currentLayerOutputMatrix.get(0, m) * Constant.NN_LEARNING_RATE);
 					
 					newWeight[m][n] = updatedWeight;
 				}
@@ -356,15 +382,16 @@ public class NeuralNetworks {
 			double newBias[][] = new double[r][c];
 			
 			Double updatedBias = 0d;
-			
 			for(int m=0;m<r;m++){
 				for(int n=0;n<c;n++){
 					
 					updatedBias = biasMatrix.get(m, n) + 
-							(Constant.LEARNING_RATE * error.get(m, n));
+							(double)(Constant.NN_LEARNING_RATE * error.get(m, n));
 					newBias[m][n]= updatedBias;
 				}
 			}
+			
+			biasMap.put(l, new Matrix(newBias));
 		}
 	}
 	
@@ -382,6 +409,45 @@ public class NeuralNetworks {
 		}
 		
 		return totalError;
+	}
+	
+	private void printInputOutputHashMap(HashMap<Integer,HashMap<String,Matrix>> 
+	inputOutputMatrixByLayer){
+		
+		Iterator<Entry<Integer, HashMap<String, Matrix>>> iterator = 
+				inputOutputMatrixByLayer.entrySet().iterator();
+		
+		while(iterator.hasNext()){
+			
+			Entry<Integer, HashMap<String, Matrix>> pair = iterator.next();
+			System.out.println("Layer "+ pair.getKey());
+			
+			System.out.println("Input Matrix");
+			printMatrix(pair.getValue().get(Constant.INPUT));
+			
+			System.out.println("Output Matrix");
+			printMatrix(pair.getValue().get(Constant.OUTPUT));
+			
+		}
+		
+	}
+	
+	private void printErrorMatrix(HashMap<Integer,Matrix> errorMatrixMap){
+		
+		Iterator<Entry<Integer, Matrix>> iterator = 
+				errorMatrixMap.entrySet().iterator();
+		
+		while(iterator.hasNext()){
+			
+			Entry<Integer, Matrix> pair = iterator.next();
+			
+			System.out.println("Layer "+pair.getKey());
+			
+			System.out.println("Error Matrix");
+			printMatrix(pair.getValue());
+			
+		}
+		
 	}
 	
 }
