@@ -83,10 +83,13 @@ public class NeuralNetworks {
 		HashMap<Integer,HashMap<String,Matrix>> inputOutputMatrixByLayer = null;
 		HashMap<Integer,Matrix> errorMatrixByLayer = null;
 		Matrix finalLayerOutputMatrix = null;
-		double predictionError = 1d;
+		double cumulativePredictionError = 0d;
+		
 		do{
 			
 			System.out.println("Loop count :" + loopCount);
+			cumulativePredictionError = 0d;
+			double predictionError = 0d;
 			
 			for(int i = 0; i < noOfInputDataRow; i++){
 				
@@ -119,14 +122,18 @@ public class NeuralNetworks {
 				
 				//System.out.println("Updated Bias");
 				//printBias();
+				
+				finalLayerOutputMatrix = inputOutputMatrixByLayer.get(Constant.NUM_OF_NN_LAYERS-1).get(Constant.OUTPUT);
+				predictionError = calculatePredictionError(target,finalLayerOutputMatrix);
+				
+				cumulativePredictionError += predictionError;
 			}
 			
-			finalLayerOutputMatrix = inputOutputMatrixByLayer.get(Constant.NUM_OF_NN_LAYERS-1).get(Constant.OUTPUT);
 			loopCount++;
-			predictionError = calculatePredictionError(finalLayerOutputMatrix);
-			System.out.println("Prediction Error " + predictionError);
 			
-		}while(predictionError > Constant.ERROR_THRESHOLD);
+			System.out.println("Prediction Error " + cumulativePredictionError);
+			
+		}while(cumulativePredictionError > Constant.ERROR_THRESHOLD);
 		
 		printNNResults();
 		printBias();
@@ -134,6 +141,12 @@ public class NeuralNetworks {
 		
 	}
 	
+	/**
+	 * This method applies the sigmoid function to the input matrix
+	 * @param input Input Matrix
+	 * @return The output Matrix after applying the sigmoid function to each
+	 * input matrix value.
+	 */
 	public Matrix applySigmoidMapFunction(Matrix input){
 		
 		int noOfRows = input.getRowDimension();
@@ -152,8 +165,11 @@ public class NeuralNetworks {
 		return new Matrix(output);
 	}
 	
+	/**
+	 * The method print the global bias HashMap
+	 */
 	public void printBias(){
-		
+	
 		System.out.println("Bias values");
 		for(int l = 1 ; l < Constant.NUM_OF_NN_LAYERS;l++){
 			
@@ -189,6 +205,9 @@ public class NeuralNetworks {
 		}
 	}
 	
+	/** 
+	 * This method print the all the weight of the neural networks.
+	 */
 	private void printWeights(){
 		
 		System.out.println("Weight Matrix");
@@ -211,6 +230,9 @@ public class NeuralNetworks {
 		
 	}
 	
+	/**
+	 * This method print the steps of neural networks applied on binary input.
+	 */
 	private void printNNResults(){
 		
 		int noOfInputDataRow = inputMatrix.getRowDimension();
@@ -229,7 +251,7 @@ public class NeuralNetworks {
 			
 			Matrix hiddenLayerWeight = weightMap.get(0);
 			
-			Matrix middleLayerInput = input.times(hiddenLayerWeight);
+			Matrix middleLayerInput = input.times(hiddenLayerWeight).plus(biasMap.get(1));
 			
 			System.out.println("Middle Layer Input");
 			printMatrix(middleLayerInput);
@@ -240,7 +262,7 @@ public class NeuralNetworks {
 			printMatrix(middleLayerOutput);
 			
 			Matrix lastLayerWeight = weightMap.get(1);
-			Matrix lastLayerInput = middleLayerOutput.times(lastLayerWeight);
+			Matrix lastLayerInput = middleLayerOutput.times(lastLayerWeight).plus(biasMap.get(2));
 			
 			System.out.println("Last Layer Input");
 			printMatrix(lastLayerInput);
@@ -253,6 +275,12 @@ public class NeuralNetworks {
 		
 	}
 	
+	/**
+	 * This method forms the input and output for all the Neural Network Layers
+	 * @param input : The input of the neural network
+	 * @return The HashMap which contains the another HashMap for each neural network
+	 * layer, That HashMap contains the input and output matrix of the particular layer
+	 */
 	private HashMap<Integer,HashMap<String,Matrix>> formInputOutputsByLayers(Matrix input){
 		
 		HashMap<Integer,HashMap<String,Matrix>> inputOutputMatrixByLayer 
@@ -294,6 +322,13 @@ public class NeuralNetworks {
 		
 	}
 	
+	/**
+	 * This method calculates the error in prediction at the various layer
+	 * of Neural Network
+	 * @param inputOutputMatrixByLayer
+	 * @param target
+	 * @return The Error Matrix
+	 */
 	private HashMap<Integer,Matrix> calculateErrors(
 			HashMap<Integer,HashMap<String,Matrix>> inputOutputMatrixByLayer,
 			Matrix target){
@@ -341,7 +376,12 @@ public class NeuralNetworks {
 	}
 	
 	
-	
+	/**
+	 * This method updates the Weight and Bias HashMap of the Neural Network
+	 * based upon the Error, Input and Output Matrix
+	 * @param inputOutputMatrixByLayer
+	 * @param errorMatrixByLayer
+	 */
 	private void updateWeightAndBias(HashMap<Integer,HashMap<String,Matrix>> 
 	inputOutputMatrixByLayer, HashMap<Integer,Matrix> errorMatrixByLayer){
 		
@@ -395,59 +435,26 @@ public class NeuralNetworks {
 		}
 	}
 	
-	
-	private Double calculatePredictionError(Matrix finalLayerOutput){
+	/**
+	 * This method calculates the error between the actual target matrix and
+	 * predicted target matrix.
+	 * @param target : Actual Target Matrix
+	 * @param finalLayerOutput Predicted Target Matrix
+	 * @return The error in the prediction
+	 */
+	private Double calculatePredictionError(Matrix target,Matrix predictedTarget){
 		
-		int totalUnits = finalLayerOutput.getColumnDimension();
+		int totalUnits = predictedTarget.getColumnDimension();
 		
 		double totalError = 0d;
 		
 		for(int i = 0 ; i < totalUnits ; i++){
 			
-			totalError += Math.pow((finalLayerOutput.get(0, i) - targetMatrix.get(0,i)),2)/2;
+			totalError += Math.pow((predictedTarget.get(0, i) - target.get(0,i)),2)/2;
 			
 		}
 		
 		return totalError;
-	}
-	
-	private void printInputOutputHashMap(HashMap<Integer,HashMap<String,Matrix>> 
-	inputOutputMatrixByLayer){
-		
-		Iterator<Entry<Integer, HashMap<String, Matrix>>> iterator = 
-				inputOutputMatrixByLayer.entrySet().iterator();
-		
-		while(iterator.hasNext()){
-			
-			Entry<Integer, HashMap<String, Matrix>> pair = iterator.next();
-			System.out.println("Layer "+ pair.getKey());
-			
-			System.out.println("Input Matrix");
-			printMatrix(pair.getValue().get(Constant.INPUT));
-			
-			System.out.println("Output Matrix");
-			printMatrix(pair.getValue().get(Constant.OUTPUT));
-			
-		}
-		
-	}
-	
-	private void printErrorMatrix(HashMap<Integer,Matrix> errorMatrixMap){
-		
-		Iterator<Entry<Integer, Matrix>> iterator = 
-				errorMatrixMap.entrySet().iterator();
-		
-		while(iterator.hasNext()){
-			
-			Entry<Integer, Matrix> pair = iterator.next();
-			
-			System.out.println("Layer "+pair.getKey());
-			
-			System.out.println("Error Matrix");
-			printMatrix(pair.getValue());
-			
-		}
-		
 	}
 	
 }
