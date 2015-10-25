@@ -1,4 +1,5 @@
 import numpy as np
+import random
 
 
 class GDA:
@@ -49,40 +50,40 @@ class GDA:
 
     def apply_gda(self):
 
-        for i in range(1,self.nbr_of_fold + 1):
+        for i in range(0, self.nbr_of_fold):
 
             # Calculate the require parameters for the GDA
-            self.fetch_train_test_data_by_fold(i)
+            self.fetch_train_test_data_by_fold()
             self.cal_mean_by_class()
             break
             # Apply the models on Test Data set
 
-    def fetch_train_test_data_by_fold(self, current_fold):
+    def fetch_train_test_data_by_fold(self):
 
+        index_list = range(0, self.nbr_of_data)
+        random.shuffle(index_list)
         nbr_of_dp_per_fold = int(self.nbr_of_data / self.nbr_of_fold)
 
-        train_extra_dp = (self.nbr_of_data % self.nbr_of_fold) if current_fold == self.nbr_of_fold else 0
-
-        train_data_start_index = (current_fold - 1) * nbr_of_dp_per_fold
-        train_data_end_index = train_data_start_index + nbr_of_dp_per_fold + train_extra_dp
-
-        self.train_attribute_matrix = self.attribute_matrix.__getslice__(train_data_start_index, train_data_end_index)
-        self.train_target_matrix = self.target_matrix.__getslice__(train_data_start_index, train_data_end_index)
-
-        if current_fold != 1:
-
-            one_half_test_attribute_matrix = self.attribute_matrix.__getslice__(0, train_data_start_index)
-            second_half_test_attribute_matrix = self.attribute_matrix.__getslice__(train_data_end_index, self.nbr_of_data)
-            self.test_attribute_matrix = np.concatenate((one_half_test_attribute_matrix, second_half_test_attribute_matrix))
-
-            one_half_test_target_matrix = self.target_matrix.__getslice__(0, train_data_start_index)
-            second_half_test_target_matrix = self.target_matrix.__getslice__(train_data_end_index, self.nbr_of_data)
-            self.test_target_matrix = np.concatenate((one_half_test_target_matrix, second_half_test_target_matrix))
-
-        else:
-
-            self.test_attribute_matrix = self.attribute_matrix.__getslice__(train_data_end_index, self.nbr_of_data)
-            self.test_target_matrix = self.target_matrix.__getslice__(train_data_end_index, self.nbr_of_data)
+        for i in range(0, nbr_of_dp_per_fold):
+            index = index_list[i]
+            if self.train_attribute_matrix is None:
+                self.train_attribute_matrix = self.attribute_matrix.__getitem__(index)
+                self.train_target_matrix = self.target_matrix.__getitem__(index)
+            else:
+                self.train_attribute_matrix = np.concatenate((self.train_attribute_matrix,
+                                                              self.attribute_matrix.__getitem__(index)))
+                self.train_target_matrix = np.concatenate((self.train_target_matrix,
+                                                           self.target_matrix.__getitem__(index)))
+        for i in range(nbr_of_dp_per_fold,self.nbr_of_data):
+            index = index_list[i]
+            if self.test_attribute_matrix is None:
+                self.test_attribute_matrix = self.attribute_matrix.__getitem__(index)
+                self.test_target_matrix = self.target_matrix.__getitem__(index)
+            else:
+                self.test_attribute_matrix = np.concatenate((self.test_attribute_matrix,
+                                                             self.attribute_matrix.__getitem__(index)))
+                self.test_target_matrix = np.concatenate((self.test_target_matrix,
+                                                          self.target_matrix.__getitem__(index)))
 
     def cal_mean_by_class(self):
 
@@ -116,9 +117,9 @@ class GDA:
 
         # Laplace Smoothing
         self.theta_by_class[self.SPAM] = (spam_attribute_matrix.shape[0] + 1) / \
-                                         (self.train_data_matrix.shape[0] + self.nbr_of_class)
+                                         (self.train_attribute_matrix.shape[0] + self.nbr_of_class)
         self.theta_by_class[self.NON_SPAM] = (non_spam_attribute_matrix.shape[0] + 1) / \
-                                             (self.train_data_matrix.shape[0] + self.nbr_of_class)
+                                             (self.train_attribute_matrix.shape[0] + self.nbr_of_class)
 
 if __name__ == "__main__":
     file_path = "/Users/Darshan/Documents/MachineLearningAlgorithms/GenerativeModels/data"
