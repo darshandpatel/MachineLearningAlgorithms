@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import math
 
 
 class GDA:
@@ -55,8 +56,9 @@ class GDA:
             # Calculate the require parameters for the GDA
             self.fetch_train_test_data_by_fold()
             self.cal_mean_by_class()
-            break
             # Apply the models on Test Data set
+            self.evaluate_model_on_test_data()
+            break
 
     def fetch_train_test_data_by_fold(self):
 
@@ -120,6 +122,51 @@ class GDA:
                                          (self.train_attribute_matrix.shape[0] + self.nbr_of_class)
         self.theta_by_class[self.NON_SPAM] = (non_spam_attribute_matrix.shape[0] + 1) / \
                                              (self.train_attribute_matrix.shape[0] + self.nbr_of_class)
+
+    def evaluate_model_on_test_data(self):
+
+        nbr_of_test_records = self.test_target_matrix.shape[0]
+
+        covariance_inverse = np.linalg.pinv(self.covariance_matrix)
+        covariance_determinant = np.linalg.det(self.covariance_matrix)
+
+        nbr_of_accurate_predict = 0
+
+        for index in range(0,nbr_of_test_records):
+
+            predicted_target = None
+            test_attribute = self.test_attribute_matrix.__getitem__(index)
+            test_target = self.test_target_matrix.__getitem__(index)
+
+            # Check the likelihood probability of the current test attribute for each of the classification class
+            spam_likelihood_prob = self.cal_likilihood_of_data(self.SPAM, test_attribute,
+                                                               covariance_inverse, covariance_determinant)
+
+            non_spam_likelihood_prob = self.cal_likilihood_of_data(self.NON_SPAM, test_attribute,
+                                                                   covariance_inverse, covariance_determinant)
+
+            if self.theta_by_class[self.NON_SPAM] * non_spam_likelihood_prob > \
+                            self.theta_by_class[self.SPAM] * spam_likelihood_prob:
+                predicted_target = 0
+            else:
+                predicted_target = 1
+
+            if int(test_target.item((0,0))) == predicted_target:
+                nbr_of_accurate_predict += 1
+
+        print("Accuracy : ")
+        print(nbr_of_accurate_predict/nbr_of_test_records)
+
+    def cal_likilihood_of_data(self, class_name, test_attribute,
+                               covariance_inverse, covariance_determinant):
+
+        diff_matrix = test_attribute - self.mean_matrix_by_class[class_name]
+
+        val = np.divide((diff_matrix * covariance_inverse * np.transpose(diff_matrix)),
+                        -2)
+        prob = math.pow(math.e, val.item((0, 0)))
+        return prob
+
 
 if __name__ == "__main__":
     file_path = "/Users/Darshan/Documents/MachineLearningAlgorithms/GenerativeModels/data"
