@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import math
+from sklearn.preprocessing import normalize
 
 
 class EM:
@@ -13,9 +14,10 @@ class EM:
         self.nbr_of_models = 2
         self.nbr_of_data = 0
         self.dim_of_data = 2
-        self.mean_for_models = []
-        self.covariance_for_models = []
-        self.coefficient_for_models = []
+        self.mean_for_models = list()
+        self.covariance_for_models = list()
+        self.coefficient_for_models = list()
+        self.converged = False
         self.read_source_data()
         self.random_initialization()
 
@@ -23,28 +25,29 @@ class EM:
 
         for i in range(0,self.nbr_of_models):
             self.mean_for_models.\
-                append(np.array((random.randrange(2,6),random.randrange(2,6))))
-            self.covariance_for_models.append(np.array(np.random.rand(2,2)))
+                append(np.matrix((random.random(),random.random())))
+            self.covariance_for_models.append(np.matrix(np.random.rand(self.dim_of_data,self.dim_of_data)))
             self.coefficient_for_models.append(random.random())
-        self.data_prob_matrix = np.random.rand(self.nbr_of_data,self.nbr_of_models)
-        self.coefficient_for_models = np.asarray(list(k/sum(self.coefficient_for_models)
-                                        for k in self.coefficient_for_models))
+
+        prob_matrix = np.matrix(np.random.rand(self.nbr_of_data,self.nbr_of_models))
+        self.data_prob_matrix = normalize(prob_matrix, norm='l1', axis=1)
+        self.coefficient_for_models = list(k/sum(self.coefficient_for_models)
+                                        for k in self.coefficient_for_models)
 
     def read_source_data(self):
         """ This function reads the source data files and creates the data matrix"""
         file_loc = self.file_path+'/'+self.file_name
-        self.data_matrix = []
+        data_list = list()
         with open(file_loc,"r") as source_file:
             for line in source_file:
                 parts = line.replace("\n","").split(" ")
-                if len(parts) == 2:
+                if len(parts) == self.dim_of_data:
                     self.nbr_of_data += 1
                     float_parts = []
                     for value in parts:
                         float_parts.append(float(value))
-                    self.data_matrix.append(float_parts)
-        print("# of data points : "+ str(self.nbr_of_data))
-
+                    data_list.append(float_parts)
+        self.data_matrix = np.matrix(data_list)
 
     def print_data_matrix(self):
         """This function prints the data matrix"""
@@ -60,73 +63,88 @@ class EM:
             print("Model coefficient :"+ str(self.coefficient_for_models[i]))
             print("Model covariance : "+ str(self.covariance_for_models[i]))
 
+        print("Data Prob Matrix")
+        print(self.data_prob_matrix)
+
     def expectation_step(self):
 
-        for i in range(0,self.nbr_of_data-1):
+        for i in range(0,self.nbr_of_data):
             # Calculate the probability of data point by the gaussian distribution
-
             temp_data_prob = []
+            for j in range(0,self.nbr_of_models):
 
-            print("Data # " + str(i))
-            for m in range(0,self.nbr_of_models):
-                print("Model # " + str(m))
-                prob = self.cal_data_prob_gaussian(m,i)
-                temp_data_prob.append(prob*self.coefficient_for_models[m])
+                prob = self.cal_data_prob_gaussian(i,j)
+                temp_data_prob.append(prob*self.coefficient_for_models[j])
+            temp_data_prob_matrix = np.matrix(temp_data_prob)
+            self.data_prob_matrix.__setitem__(i,normalize(temp_data_prob_matrix, norm='l1', axis=1))
 
-            sum_value = sum(temp_data_prob)
-            for v in range(0,len(temp_data_prob)):
-                self.data_prob_matrix[i][v] = temp_data_prob[v]/sum_value
+    def cal_data_prob_gaussian(self,data_nbr,model_nbr):
 
-    def cal_data_prob_gaussian(self,model_nbr,data_nbr):
+        diff_matrix = self.data_matrix.__getitem__(data_nbr) - self.mean_for_models[model_nbr]
 
-        diff_matrix = self.data_matrix[data_nbr] - self.mean_for_models[model_nbr]
-
-        val = (-1/2) * (diff_matrix * \
+        val = np.divide((diff_matrix * \
                         np.linalg.pinv(self.covariance_for_models[model_nbr]) * \
-                        np.transpose(diff_matrix))
+                        np.transpose(diff_matrix)),-2)
         determinant = np.linalg.det(self.covariance_for_models[model_nbr])
-        prob = (math.pow(2*math.pi,(self.nbr_of_models/-2.0)) * (math.pow(math.e,val[0][0]))) \
-               / math.sqrt(abs(determinant))
+        prob = (math.pow(math.e,val.item((0,0)))) / math.sqrt(abs(determinant))
 
         return prob
 
     def maximization_step(self):
 
         for i in range(0,self.nbr_of_models):
-
-            print("# of model : " + str(i))
-            data_prob_sum = 0
-            mean_numerator_sum = 0
-            covariance_numerator_sum = 0
+            prob_sum = 0.0
+            mean_numerator_sum = 0.0
+            covariance_numerator_sum = np.matrix(np.zeros((self.dim_of_data,self.dim_of_data)))
 
             for j in range(0,self.nbr_of_data):
 
-                print("# of data : " + str(j))
+                prob_val = self.data_prob_matrix.item((j,i))
+                diff = self.data_matrix.__getitem__(j) - self.mean_for_models[i]
+                prob_sum += prob_val
+                mean_numerator_sum += np.multiply(self.data_matrix.__getitem__(j),prob_val)
+                covariance_numerator_sum += np.multiply((np.transpose(diff) * diff),prob_val)
 
-                prob_val = self.data_prob_matrix[j][i]
-                diff = (self.data_matrix[j] - self.mean_for_models[i])
-
-                data_prob_sum += prob_val
-                mean_numerator_sum += np.multiply(self.data_matrix[j],prob_val)
-                covariance_numerator_sum += np.multiply((diff * np.transpose(diff)),prob_val)
-
-            self.mean_for_models[i] = mean_numerator_sum/data_prob_sum
-            self.data_prob_sum[i] = np.divide(self.nbr_of_data,data_prob_sum)
-            self.covariance_numerator_sum[i] = covariance_numerator_sum/data_prob_sum
+            self.covariance_for_models[i] = np.divide(covariance_numerator_sum,prob_sum)
+            self.mean_for_models[i] = np.divide(mean_numerator_sum,prob_sum)
+            self.coefficient_for_models[i] = prob_sum / self.nbr_of_data
 
     def run_em(self):
         count = 0
-        while(count < 100):
+
+        while not self.converged:
+
             print("Cycle count : " + str(count))
-            count+=1
+            count += 1
+            old_coefficient_for_models = self.coefficient_for_models
+            old_covariance_for_models = self.covariance_for_models
+            old_mean_for_models = self.mean_for_models
             self.expectation_step()
             self.maximization_step()
-            em.print_algo_parameters()
+            self.print_algo_parameters()
+            self.check_halting_cond(old_coefficient_for_models,old_covariance_for_models,
+                                    old_mean_for_models,count)
+        self.print_algo_parameters()
+
+    def check_halting_cond(self,old_coefficient_for_models,old_covariance_for_models,
+                                    old_mean_for_models,count):
+
+        total_coefficient_diff = 0.0
+        total_covariance_diff = 0.0
+        total_mean_diff = 0.0
+        for i in range(0,self.nbr_of_models):
+            total_coefficient_diff += abs(self.coefficient_for_models[i]-old_coefficient_for_models[i])
+            total_covariance_diff += (self.covariance_for_models[i] - old_covariance_for_models[i]).max()
+            total_mean_diff += (self.mean_for_models[i] - old_mean_for_models[i]).max()
+
+        if count > 50:
+            self.converged = True
+
 
 if __name__ == "__main__":
     print('Hello World !')
     file_path = '/Users/Darshan/Documents/MachineLearningAlgorithms/GenerativeModels/data'
     file_name = '2gaussian.txt'
     em = EM(file_path,file_name)
-    #em.print_algo_parameters()
+    em.print_algo_parameters()
     em.run_em()
