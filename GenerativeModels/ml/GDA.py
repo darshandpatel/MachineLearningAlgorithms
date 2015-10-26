@@ -93,7 +93,7 @@ class GDA:
 
         for i in range(0, self.nbr_of_fold):
 
-            if i == current_fold:
+            if i != current_fold:
                 index = self.data_points_by_fold[i]
                 if self.train_attribute_matrix is None:
                     self.train_attribute_matrix = self.attribute_matrix.__getitem__(index)
