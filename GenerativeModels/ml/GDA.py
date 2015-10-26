@@ -26,6 +26,7 @@ class GDA:
         self.cal_covariance()
         self.mean_matrix_by_class = dict()
         self.theta_by_class = dict()
+        self.data_points_by_fold = dict()
 
     def read_source_data(self):
         """ This function reads the source data files and creates the data matrix"""
@@ -51,41 +52,67 @@ class GDA:
 
     def apply_gda(self):
 
+        total_accuracy = 0.0
+        self.form_diff_data_folds()
         for i in range(0, self.nbr_of_fold):
 
             # Calculate the require parameters for the GDA
-            self.fetch_train_test_data_by_fold()
+            self.fetch_train_test_data_by_fold(i)
             self.cal_mean_by_class()
             # Apply the models on Test Data set
-            self.evaluate_model_on_test_data()
-            break
+            total_accuracy += self.evaluate_model_on_test_data()
 
-    def fetch_train_test_data_by_fold(self):
+        print("Total Accuracy ")
+        print(float(total_accuracy)/self.nbr_of_fold)
+
+    def form_diff_data_folds(self):
 
         index_list = range(0, self.nbr_of_data)
         random.shuffle(index_list)
         nbr_of_dp_per_fold = int(self.nbr_of_data / self.nbr_of_fold)
 
-        for i in range(0, nbr_of_dp_per_fold):
-            index = index_list[i]
-            if self.train_attribute_matrix is None:
-                self.train_attribute_matrix = self.attribute_matrix.__getitem__(index)
-                self.train_target_matrix = self.target_matrix.__getitem__(index)
+        for i in range(0, self.nbr_of_fold):
+
+            if i != (self.nbr_of_fold - 1):
+                start_index = nbr_of_dp_per_fold * i
+                self.data_points_by_fold[i] = index_list[start_index:(start_index+nbr_of_dp_per_fold)]
             else:
-                self.train_attribute_matrix = np.concatenate((self.train_attribute_matrix,
-                                                              self.attribute_matrix.__getitem__(index)))
-                self.train_target_matrix = np.concatenate((self.train_target_matrix,
-                                                           self.target_matrix.__getitem__(index)))
-        for i in range(nbr_of_dp_per_fold,self.nbr_of_data):
-            index = index_list[i]
-            if self.test_attribute_matrix is None:
-                self.test_attribute_matrix = self.attribute_matrix.__getitem__(index)
-                self.test_target_matrix = self.target_matrix.__getitem__(index)
+                start_index = nbr_of_dp_per_fold * i
+                self.data_points_by_fold[i] = index_list[start_index:self.nbr_of_data]
+
+    def fetch_train_test_data_by_fold(self,current_fold):
+
+        self.train_attribute_matrix = None
+        self.train_target_matrix = None
+        self.test_attribute_matrix = None
+        self.test_target_matrix = None
+
+        index_list = range(0, self.nbr_of_data)
+        random.shuffle(index_list)
+        nbr_of_dp_per_fold = int(self.nbr_of_data / self.nbr_of_fold)
+
+        for i in range(0, self.nbr_of_fold):
+
+            if i == current_fold:
+                index = self.data_points_by_fold[i]
+                if self.train_attribute_matrix is None:
+                    self.train_attribute_matrix = self.attribute_matrix.__getitem__(index)
+                    self.train_target_matrix = self.target_matrix.__getitem__(index)
+                else:
+                    self.train_attribute_matrix = np.concatenate((self.train_attribute_matrix,
+                                                                  self.attribute_matrix.__getitem__(index)))
+                    self.train_target_matrix = np.concatenate((self.train_target_matrix,
+                                                               self.target_matrix.__getitem__(index)))
             else:
-                self.test_attribute_matrix = np.concatenate((self.test_attribute_matrix,
-                                                             self.attribute_matrix.__getitem__(index)))
-                self.test_target_matrix = np.concatenate((self.test_target_matrix,
-                                                          self.target_matrix.__getitem__(index)))
+                index = self.data_points_by_fold[i]
+                if self.test_attribute_matrix is None:
+                    self.test_attribute_matrix = self.attribute_matrix.__getitem__(index)
+                    self.test_target_matrix = self.target_matrix.__getitem__(index)
+                else:
+                    self.test_attribute_matrix = np.concatenate((self.test_attribute_matrix,
+                                                                 self.attribute_matrix.__getitem__(index)))
+                    self.test_target_matrix = np.concatenate((self.test_target_matrix,
+                                                              self.target_matrix.__getitem__(index)))
 
     def cal_mean_by_class(self):
 
@@ -118,9 +145,9 @@ class GDA:
             self.mean_matrix_by_class[self.NON_SPAM] = np.matrix(np.zeros((1, self.nbr_of_attributes)))
 
         # Laplace Smoothing
-        self.theta_by_class[self.SPAM] = (spam_attribute_matrix.shape[0] + 1) / \
+        self.theta_by_class[self.SPAM] = float(spam_attribute_matrix.shape[0] + 1) / \
                                          (self.train_attribute_matrix.shape[0] + self.nbr_of_class)
-        self.theta_by_class[self.NON_SPAM] = (non_spam_attribute_matrix.shape[0] + 1) / \
+        self.theta_by_class[self.NON_SPAM] = float(non_spam_attribute_matrix.shape[0] + 1) / \
                                              (self.train_attribute_matrix.shape[0] + self.nbr_of_class)
 
     def evaluate_model_on_test_data(self):
@@ -145,23 +172,24 @@ class GDA:
             non_spam_likelihood_prob = self.cal_likilihood_of_data(self.NON_SPAM, test_attribute,
                                                                    covariance_inverse, covariance_determinant)
 
-            if self.theta_by_class[self.NON_SPAM] * non_spam_likelihood_prob > \
-                            self.theta_by_class[self.SPAM] * spam_likelihood_prob:
+            if float(self.theta_by_class[self.NON_SPAM] * non_spam_likelihood_prob) > \
+                    float(self.theta_by_class[self.SPAM] * spam_likelihood_prob):
                 predicted_target = 0
             else:
                 predicted_target = 1
 
-            if int(test_target.item((0,0))) == predicted_target:
+            if int(test_target.item((0, 0))) == predicted_target:
                 nbr_of_accurate_predict += 1
 
         print("Accuracy : ")
-        print(nbr_of_accurate_predict/nbr_of_test_records)
+        print(float(nbr_of_accurate_predict)/nbr_of_test_records)
+
+        return float(nbr_of_accurate_predict)/nbr_of_test_records
 
     def cal_likilihood_of_data(self, class_name, test_attribute,
                                covariance_inverse, covariance_determinant):
 
         diff_matrix = test_attribute - self.mean_matrix_by_class[class_name]
-
         val = np.divide((diff_matrix * covariance_inverse * np.transpose(diff_matrix)),
                         -2)
         prob = math.pow(math.e, val.item((0, 0)))
