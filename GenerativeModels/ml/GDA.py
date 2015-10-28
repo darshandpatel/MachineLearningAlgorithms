@@ -166,10 +166,10 @@ class GDA:
             test_target = self.test_target_matrix.__getitem__(index)
 
             # Check the likelihood probability of the current test attribute for each of the classification class
-            spam_likelihood_prob = self.cal_likilihood_of_data(self.SPAM, test_attribute,
+            spam_likelihood_prob = self.cal_likelihood_of_data(self.SPAM, test_attribute,
                                                                covariance_inverse, covariance_determinant)
 
-            non_spam_likelihood_prob = self.cal_likilihood_of_data(self.NON_SPAM, test_attribute,
+            non_spam_likelihood_prob = self.cal_likelihood_of_data(self.NON_SPAM, test_attribute,
                                                                    covariance_inverse, covariance_determinant)
 
             if float(self.theta_by_class[self.NON_SPAM] * non_spam_likelihood_prob) > \
@@ -186,7 +186,7 @@ class GDA:
 
         return float(nbr_of_accurate_predict)/nbr_of_test_records
 
-    def cal_likilihood_of_data(self, class_name, test_attribute,
+    def cal_likelihood_of_data(self, class_name, test_attribute,
                                covariance_inverse, covariance_determinant):
 
         diff_matrix = test_attribute - self.mean_matrix_by_class[class_name]
