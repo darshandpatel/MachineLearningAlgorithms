@@ -87,10 +87,6 @@ class GDA:
         self.test_attribute_matrix = None
         self.test_target_matrix = None
 
-        index_list = range(0, self.nbr_of_data)
-        random.shuffle(index_list)
-        nbr_of_dp_per_fold = int(self.nbr_of_data / self.nbr_of_fold)
-
         for i in range(0, self.nbr_of_fold):
 
             if i != current_fold:
