@@ -3,7 +3,7 @@ import numpy as np
 import math
 
 
-class Naive:
+class NaiveBayes:
 
     SPAM = "SPAM"
     NON_SPAM = "NON_SPAM"
@@ -23,20 +23,18 @@ class Naive:
         self.nbr_of_data = 0
         self.nbr_of_attributes = 57
         self.nbr_of_class = 2
-        #self.covariance_matrix = None
-        self.read_source_data()
-        #self.cal_covariance()
-        self.attribute_mean_matrix = self.attribute_matrix.mean(axis=0)
-        #self.mean_matrix_by_class = dict()
-        #self.cal_overall_mean_by_class()
-        self.feature_likelilood_prob = dict()
+        self.attribute_mean_matrix_by_class = dict()
+        self.class_prior_prob = dict()
+        self.feature_likelihood_prob = dict()
         self.data_points_by_fold = dict()
+        self.read_source_data()
 
     def read_source_data(self):
         """ This function reads the source data files and creates the data matrix"""
         file_loc = self.file_path+'/'+self.file_name
         attribute_list = list()
         target_list = list()
+
         with open(file_loc, "r") as source_file:
             for line in source_file:
                 parts = line.split(",")
@@ -48,11 +46,9 @@ class Naive:
                         float_parts.append(float(parts[i]))
                     target_list.append([float(parts[nbr_of_parts-1])])
                     attribute_list.append(float_parts)
+
         self.attribute_matrix = np.matrix(attribute_list)
         self.target_matrix = np.matrix(target_list)
-
-    def cal_covariance(self):
-        self.covariance_matrix = np.cov(self.attribute_matrix, rowvar=0)
 
     def form_diff_data_folds(self):
 
@@ -69,7 +65,7 @@ class Naive:
                 start_index = nbr_of_dp_per_fold * i
                 self.data_points_by_fold[i] = index_list[start_index:self.nbr_of_data]
 
-    def fetch_train_test_data_by_fold(self,current_fold):
+    def fetch_train_test_data_by_fold(self, current_fold):
 
         self.train_attribute_matrix = None
         self.train_target_matrix = None
@@ -110,7 +106,7 @@ class Naive:
 
         for index in range(0, self.nbr_of_data):
 
-            target = self.train_target_matrix.__getitem__(index)
+            target = self.target_matrix.__getitem__(index)
             if target.item((0, 0)) == 1:
                 if spam_attribute_matrix is None:
                     spam_attribute_matrix = self.attribute_matrix.__getitem__(index)
@@ -125,14 +121,20 @@ class Naive:
                                                                 self.attribute_matrix.__getitem__(index)))
 
         if spam_attribute_matrix is not None:
-            self.mean_matrix_by_class[self.SPAM] = spam_attribute_matrix.mean(axis=0)
+            self.attribute_mean_matrix_by_class[self.SPAM] = spam_attribute_matrix.mean(axis=0)
+            self.class_prior_prob[self.SPAM] = float(spam_attribute_matrix.shape[0] + 1) /\
+                                               (self.target_matrix.shape[0] + 2)
         else:
-            self.mean_matrix_by_class[self.SPAM] = np.matrix(np.zeros((1, self.nbr_of_attributes)))
+            self.attribute_mean_matrix_by_class[self.SPAM] = np.matrix(np.zeros((1, self.nbr_of_attributes)))
+            self.class_prior_prob[self.SPAM] = 0.5
 
         if non_spam_attribute_matrix is not None:
-            self.mean_matrix_by_class[self.NON_SPAM] = non_spam_attribute_matrix.mean(axis=0)
+            self.attribute_mean_matrix_by_class[self.NON_SPAM] = non_spam_attribute_matrix.mean(axis=0)
+            self.class_prior_prob[self.NON_SPAM] = float(non_spam_attribute_matrix.shape[0] + 1) /\
+                                                   (self.target_matrix.shape[0] + 2)
         else:
-            self.mean_matrix_by_class[self.NON_SPAM] = np.matrix(np.zeros((1, self.nbr_of_attributes)))
+            self.attribute_mean_matrix_by_class[self.NON_SPAM] = np.matrix(np.zeros((1, self.nbr_of_attributes)))
+            self.class_prior_prob[self.NON_SPAM] = 0.5
 
     def cal_feature_likelihood_prob(self):
 
@@ -157,10 +159,11 @@ class Naive:
                     attr_val = self.train_attribute_matrix.__getitem__(index).\
                         item((0, attribute_index))
 
-                    if attr_val > self.attribute_mean_matrix.item((0, attribute_index)):
-                        spam_above_mean_attr_value_count[attribute_index] += 1
+                    if attr_val > self.attribute_mean_matrix_by_class[self.SPAM].\
+                            item((0, attribute_index)):
+                        spam_above_mean_attr_value_count[0][attribute_index] += 1
                     else:
-                        spam_below_mean_attr_value_count[attribute_index] += 1
+                        spam_below_mean_attr_value_count[0][attribute_index] += 1
 
             else:
 
@@ -170,10 +173,11 @@ class Naive:
                     attr_val = self.train_attribute_matrix.__getitem__(index).\
                         item((0, attribute_index))
 
-                    if attr_val > self.attribute_mean_matrix.item((0, attribute_index)):
-                        non_spam_above_mean_attr_value_count[attribute_index] += 1
+                    if attr_val > self.attribute_mean_matrix_by_class[self.NON_SPAM].\
+                            item((0, attribute_index)):
+                        non_spam_above_mean_attr_value_count[0][attribute_index] += 1
                     else:
-                        non_spam_below_mean_attr_value_count[attribute_index] += 1
+                        non_spam_below_mean_attr_value_count[0][attribute_index] += 1
 
         # Laplace Smoothing
 
@@ -181,13 +185,13 @@ class Naive:
 
             feature_prob = dict()
 
-            spam_above_mean_prob = float(spam_above_mean_attr_value_count[index] + 1) /\
+            spam_above_mean_prob = float(spam_above_mean_attr_value_count[0][index] + 1) / \
                                    (total_spam_data + 2)
-            spam_below_mean_prob = float(non_spam_below_mean_attr_value_count[index] + 1) / \
+            spam_below_mean_prob = float(non_spam_below_mean_attr_value_count[0][index] + 1) / \
                                    (total_spam_data + 2)
-            non_spam_above_mean_prob = float(spam_above_mean_attr_value_count[index] + 1) / \
+            non_spam_above_mean_prob = float(spam_above_mean_attr_value_count[0][index] + 1) / \
                                        (total_non_spam_data + 2)
-            non_spam_below_mean_prob = float(non_spam_below_mean_attr_value_count[index] + 1) / \
+            non_spam_below_mean_prob = float(non_spam_below_mean_attr_value_count[0][index] + 1) / \
                                        (total_non_spam_data + 2)
 
             feature_prob[self.ABOVE_MEAN] = {self.SPAM: spam_above_mean_prob,
@@ -195,19 +199,86 @@ class Naive:
             feature_prob[self.BELOW_MEAN] = {self.SPAM: spam_below_mean_prob,
                                              self.NON_SPAM: non_spam_below_mean_prob}
 
-            self.feature_likelilood_prob[index] = feature_prob
+            self.feature_likelihood_prob[index] = feature_prob
+
+    def cal_likelihood_of_data(self, class_name, attributes):
+
+        likelihood_prob = 1.0
+
+        for index in range(0, self.nbr_of_attributes):
+
+            attr_val = attributes.item((0, index))
+            mean_attr_val = self.attribute_mean_matrix_by_class[class_name].item((0, index))
+
+            if attr_val >= mean_attr_val:
+                likelihood_prob *= self.feature_likelihood_prob[index][self.ABOVE_MEAN][class_name]
+            else:
+                likelihood_prob *= self.feature_likelihood_prob[index][self.BELOW_MEAN][class_name]
+
+        return likelihood_prob
+
+    def evaluate_model_on_test_data(self):
+
+        nbr_of_test_records = self.test_target_matrix.shape[0]
+
+        nbr_of_false_positive = 0
+        nbr_of_false_negative = 0
+        nbr_of_true_positive = 0
+        nbr_of_true_negative = 0
+
+        for index in range(0, nbr_of_test_records):
+
+            predicted_target = None
+            test_attribute = self.test_attribute_matrix.__getitem__(index)
+            test_target = self.test_target_matrix.__getitem__(index)
+
+            # Check the likelihood probability of the current test attribute for each of the classification class
+            data_spam_likelihood_prob = self.class_prior_prob[self.SPAM] * \
+                                   self.cal_likelihood_of_data(self.SPAM, test_attribute)
+
+            data_non_spam_likelihood_prob = self.class_prior_prob[self.NON_SPAM] * \
+                                            self.cal_likelihood_of_data(self.NON_SPAM, test_attribute)
+
+            if data_spam_likelihood_prob > data_non_spam_likelihood_prob:
+                predicted_target = 1
+            else:
+                predicted_target = 0
+
+            if int(test_target.item((0, 0))) == 1:
+
+                if predicted_target == 1:
+                    nbr_of_true_positive += 1
+                else:
+                    nbr_of_false_positive += 1
+            else:
+
+                if predicted_target == 0:
+                    nbr_of_true_negative += 1
+                else:
+                    nbr_of_false_negative += 1
+
+        print("Results")
+        print("True Positive " + str(nbr_of_true_positive))
+        print("False Positive " + str(nbr_of_false_positive))
+        print("True Negative " + str(nbr_of_true_negative))
+        print("False Negative " + str(nbr_of_false_negative))
 
     def apply_naive_bernoulli(self):
 
-        total_accuracy = 0.0
         self.form_diff_data_folds()
+        self.cal_overall_mean_by_class()
+
         for i in range(0, self.nbr_of_fold):
 
             # Calculate the require parameters for the GDA
             self.fetch_train_test_data_by_fold(i)
-            self.cal_mean_by_class()
+            self.cal_feature_likelihood_prob()
             # Apply the models on Test Data set
-            total_accuracy += self.evaluate_model_on_test_data()
+            self.evaluate_model_on_test_data()
+            break
 
-        print("Total Accuracy ")
-        print(float(total_accuracy)/self.nbr_of_fold)
+if __name__ == "__main__":
+    file_path = "/Users/Darshan/Documents/MachineLearningAlgorithms/GenerativeModels/data"
+    file_name = "spambase.data"
+    naive = NaiveBayes(file_path, file_name)
+    naive.apply_naive_bernoulli()
