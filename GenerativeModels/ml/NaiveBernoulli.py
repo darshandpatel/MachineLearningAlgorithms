@@ -72,10 +72,6 @@ class NaiveBayes:
         self.test_attribute_matrix = None
         self.test_target_matrix = None
 
-        index_list = range(0, self.nbr_of_data)
-        random.shuffle(index_list)
-        nbr_of_dp_per_fold = int(self.nbr_of_data / self.nbr_of_fold)
-
         for i in range(0, self.nbr_of_fold):
 
             if i != current_fold:
@@ -187,9 +183,9 @@ class NaiveBayes:
 
             spam_above_mean_prob = float(spam_above_mean_attr_value_count[0][index] + 1) / \
                                    (total_spam_data + 2)
-            spam_below_mean_prob = float(non_spam_below_mean_attr_value_count[0][index] + 1) / \
+            spam_below_mean_prob = float(spam_below_mean_attr_value_count[0][index] + 1) / \
                                    (total_spam_data + 2)
-            non_spam_above_mean_prob = float(spam_above_mean_attr_value_count[0][index] + 1) / \
+            non_spam_above_mean_prob = float(non_spam_above_mean_attr_value_count[0][index] + 1) / \
                                        (total_non_spam_data + 2)
             non_spam_below_mean_prob = float(non_spam_below_mean_attr_value_count[0][index] + 1) / \
                                        (total_non_spam_data + 2)
@@ -263,10 +259,15 @@ class NaiveBayes:
         print("True Negative " + str(nbr_of_true_negative))
         print("False Negative " + str(nbr_of_false_negative))
 
+        accuracy = float(nbr_of_true_positive+nbr_of_true_negative) / nbr_of_test_records
+        print("Accuracy " + str(accuracy))
+        return accuracy
+
     def apply_naive_bernoulli(self):
 
         self.form_diff_data_folds()
         self.cal_overall_mean_by_class()
+        total_accuracy = 0.0
 
         for i in range(0, self.nbr_of_fold):
 
@@ -274,8 +275,11 @@ class NaiveBayes:
             self.fetch_train_test_data_by_fold(i)
             self.cal_feature_likelihood_prob()
             # Apply the models on Test Data set
-            self.evaluate_model_on_test_data()
-            break
+            total_accuracy += self.evaluate_model_on_test_data()
+
+        print("Average Accuracy")
+        print(total_accuracy/self.nbr_of_fold)
+
 
 if __name__ == "__main__":
     file_path = "/Users/Darshan/Documents/MachineLearningAlgorithms/GenerativeModels/data"
