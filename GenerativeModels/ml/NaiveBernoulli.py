@@ -1,7 +1,9 @@
 import random
 import numpy as np
+from ggplot import *
+import pandas as pd
 import math
-
+import operator
 
 class NaiveBayes:
 
@@ -28,6 +30,7 @@ class NaiveBayes:
         self.feature_likelihood_prob = dict()
         self.data_points_by_fold = dict()
         self.read_source_data()
+        self.log_odds = dict()
 
     def read_source_data(self):
         """ This function reads the source data files and creates the data matrix"""
@@ -213,7 +216,7 @@ class NaiveBayes:
 
         return likelihood_prob
 
-    def evaluate_model_on_test_data(self):
+    def evaluate_model_on_test_data(self, current_fold):
 
         nbr_of_test_records = self.test_target_matrix.shape[0]
 
@@ -234,6 +237,9 @@ class NaiveBayes:
 
             data_non_spam_likelihood_prob = self.class_prior_prob[self.NON_SPAM] * \
                                             self.cal_likelihood_of_data(self.NON_SPAM, test_attribute)
+
+            if current_fold == 0:
+                self.log_odds[index] = math.log(data_spam_likelihood_prob / data_non_spam_likelihood_prob)
 
             if data_spam_likelihood_prob > data_non_spam_likelihood_prob:
                 predicted_target = 1
@@ -259,6 +265,65 @@ class NaiveBayes:
         print("True Negative " + str(nbr_of_true_negative))
         print("False Negative " + str(nbr_of_false_negative))
 
+        if current_fold == 0:
+
+            nbr_of_false_positive = 0
+            nbr_of_false_negative = 0
+            nbr_of_true_positive = 0
+            nbr_of_true_negative = 0
+
+            true_positive_rate = list()
+            false_positive_rate = list()
+
+            sorted_log_odds = sorted(self.log_odds.items(), key=operator.itemgetter(1))
+
+            for i in range(0, nbr_of_test_records):
+
+                test_data_index = sorted_log_odds[i][0]
+                test_data_log_vale = sorted_log_odds[i][1]
+
+                actual_target_vale = self.test_target_matrix.__getitem__(test_data_index).item((0, 0))
+
+                if test_data_log_vale > 0:
+
+                    if actual_target_vale == 1:
+                        nbr_of_true_positive += 1
+                    else:
+                        nbr_of_false_positive += 1
+                else:
+
+                    if actual_target_vale == 0:
+                        nbr_of_true_negative += 1
+                    else:
+                        nbr_of_false_negative += 1
+
+                print("True Positive " + str(nbr_of_true_positive))
+                print("False Positive " + str(nbr_of_false_positive))
+                print("True Negative " + str(nbr_of_true_negative))
+                print("False Negative " + str(nbr_of_false_negative))
+
+                if (nbr_of_true_positive + nbr_of_false_negative) != 0:
+                    true_positive_rate.append(float(nbr_of_true_positive) / \
+                                            (nbr_of_true_positive + nbr_of_false_negative))
+                else:
+                    true_positive_rate.append(0.0)
+                true_positive_rate.append(1)
+
+                if (nbr_of_false_positive + nbr_of_true_negative) != 0.0:
+                    false_positive_rate.append(float(nbr_of_false_positive) / \
+                                             (nbr_of_false_positive + nbr_of_true_negative))
+                else:
+                    false_positive_rate.append(0.0)
+                false_positive_rate.append(1)
+
+            df = pd.DataFrame(dict(tpr=true_positive_rate, fpr=false_positive_rate))
+            print(true_positive_rate)
+            print(false_positive_rate)
+            g = ggplot(df, aes(x='fpr', y='tpr')) +\
+                    geom_line() +\
+                    geom_abline(linetype='dashed') + xlim(0, 1) + ylim(0, 1)
+            print(g)
+
         accuracy = float(nbr_of_true_positive+nbr_of_true_negative) / nbr_of_test_records
         print("Accuracy " + str(accuracy))
         return accuracy
@@ -275,11 +340,9 @@ class NaiveBayes:
             self.fetch_train_test_data_by_fold(i)
             self.cal_feature_likelihood_prob()
             # Apply the models on Test Data set
-            total_accuracy += self.evaluate_model_on_test_data()
-
+            total_accuracy += self.evaluate_model_on_test_data(i)
         print("Average Accuracy")
         print(total_accuracy/self.nbr_of_fold)
-
 
 if __name__ == "__main__":
     file_path = "/Users/Darshan/Documents/MachineLearningAlgorithms/GenerativeModels/data"
