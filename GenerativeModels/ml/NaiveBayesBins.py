@@ -203,10 +203,15 @@ class NaiveBayes:
     def cal_bin_index(self, attribute_index, attr_val):
         bin_value_list = self.bin_values_per_feature[attribute_index]
         bin_index = None
-        for i in range(0, self.nbr_of_bins-1):
-            if (bin_value_list[i] <= attr_val) and (attr_val < bin_value_list[i+1]):
-                bin_index = i
-                break
+        for i in range(0, self.nbr_of_bins):
+            if i == 0:
+                if (bin_value_list[i] <= attr_val) and (attr_val <= bin_value_list[i+1]):
+                    bin_index = i
+                    break
+            else:
+                if (bin_value_list[i] < attr_val) and (attr_val <= bin_value_list[i+1]):
+                    bin_index = i
+                    break
         return bin_index
 
     def cal_likelihood_of_data(self, class_name, attributes):
@@ -270,68 +275,69 @@ class NaiveBayes:
         print("True Negative " + str(nbr_of_true_negative))
         print("False Negative " + str(nbr_of_false_negative))
 
-        if current_fold == 0:
-
-            nbr_of_false_positive = 0
-            nbr_of_false_negative = 0
-            nbr_of_true_positive = 0
-            nbr_of_true_negative = 0
-
-            true_positive_rate = list()
-            false_positive_rate = list()
-
-            sorted_log_odds = sorted(self.log_odds.items(), key=operator.itemgetter(1))
-
-            for i in range(0, nbr_of_test_records):
-
-                test_data_index = sorted_log_odds[i][0]
-                test_data_log_vale = sorted_log_odds[i][1]
-
-                actual_target_vale = self.test_target_matrix.__getitem__(test_data_index).item((0, 0))
-
-                if test_data_log_vale > 0:
-
-                    if actual_target_vale == 1:
-                        nbr_of_true_positive += 1
-                    else:
-                        nbr_of_false_positive += 1
-                else:
-
-                    if actual_target_vale == 0:
-                        nbr_of_true_negative += 1
-                    else:
-                        nbr_of_false_negative += 1
-
-                print("True Positive " + str(nbr_of_true_positive))
-                print("False Positive " + str(nbr_of_false_positive))
-                print("True Negative " + str(nbr_of_true_negative))
-                print("False Negative " + str(nbr_of_false_negative))
-
-                if (nbr_of_true_positive + nbr_of_false_negative) != 0:
-                    true_positive_rate.append(float(nbr_of_true_positive) / \
-                                            (nbr_of_true_positive + nbr_of_false_negative))
-                else:
-                    true_positive_rate.append(0.0)
-                true_positive_rate.append(1)
-
-                if (nbr_of_false_positive + nbr_of_true_negative) != 0.0:
-                    false_positive_rate.append(float(nbr_of_false_positive) / \
-                                             (nbr_of_false_positive + nbr_of_true_negative))
-                else:
-                    false_positive_rate.append(0.0)
-                false_positive_rate.append(1)
-
-            df = pd.DataFrame(dict(tpr=true_positive_rate, fpr=false_positive_rate))
-            print(true_positive_rate)
-            print(false_positive_rate)
-            g = ggplot(df, aes(x='fpr', y='tpr')) +\
-                    geom_line() +\
-                    geom_abline(linetype='dashed') + xlim(0, 1) + ylim(0, 1)
-            print(g)
-
         accuracy = float(nbr_of_true_positive+nbr_of_true_negative) / nbr_of_test_records
         print("Accuracy " + str(accuracy))
         return accuracy
+
+    def draw_roc(self):
+
+        nbr_of_false_positive = 0
+        nbr_of_false_negative = 0
+        nbr_of_true_positive = 0
+        nbr_of_true_negative = 0
+
+        true_positive_rate = list()
+        false_positive_rate = list()
+
+        sorted_log_odds = sorted(self.log_odds.items(), key=operator.itemgetter(1))
+        nbr_of_test_records = self.test_target_matrix.shape[0]
+
+        for i in range(0, nbr_of_test_records):
+
+            test_data_index = sorted_log_odds[i][0]
+            test_data_log_vale = sorted_log_odds[i][1]
+
+            actual_target_vale = self.test_target_matrix.__getitem__(test_data_index).item((0, 0))
+
+            if test_data_log_vale > 0:
+
+                if actual_target_vale == 1:
+                    nbr_of_true_positive += 1
+                else:
+                    nbr_of_false_positive += 1
+            else:
+
+                if actual_target_vale == 0:
+                    nbr_of_true_negative += 1
+                else:
+                    nbr_of_false_negative += 1
+
+            print("True Positive " + str(nbr_of_true_positive))
+            print("False Positive " + str(nbr_of_false_positive))
+            print("True Negative " + str(nbr_of_true_negative))
+            print("False Negative " + str(nbr_of_false_negative))
+
+            if (nbr_of_true_positive + nbr_of_false_negative) != 0:
+                true_positive_rate.append(float(nbr_of_true_positive) / \
+                                        (nbr_of_true_positive + nbr_of_false_negative))
+            else:
+                true_positive_rate.append(0.0)
+            true_positive_rate.append(1)
+
+            if (nbr_of_false_positive + nbr_of_true_negative) != 0.0:
+                false_positive_rate.append(float(nbr_of_false_positive) / \
+                                         (nbr_of_false_positive + nbr_of_true_negative))
+            else:
+                false_positive_rate.append(0.0)
+            false_positive_rate.append(1)
+
+        df = pd.DataFrame(dict(tpr=true_positive_rate, fpr=false_positive_rate))
+        print(true_positive_rate)
+        print(false_positive_rate)
+        g = ggplot(df, aes(x='fpr', y='tpr')) +\
+                geom_line() +\
+                geom_abline(linetype='dashed') + xlim(0, 1) + ylim(0, 1)
+        print(g)
 
     def apply_naive_bernoulli(self):
 
