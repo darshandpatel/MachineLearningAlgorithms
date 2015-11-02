@@ -225,8 +225,10 @@ public class DecisionTree{
 	public void formTrainDecisionTree(Node rootNode,Matrix trainDataMatrix){
 		
 		Integer exploredNodeCount = 0;
-		Integer exploredNodeLimit = (1 + (int)Math.pow(2,Constant.SPAMBASE_DATA_DEPTH_LIMIT));
-		
+		Integer exploredNodeLimit = 1;
+		for(int i = 0; i < Constant.SPAMBASE_DATA_DEPTH_LIMIT; i++){
+			exploredNodeLimit += (int)Math.pow(2,Constant.SPAMBASE_DATA_DEPTH_LIMIT);
+		}
 		Queue<Node> nodeQueue = new LinkedList<Node>();
 		nodeQueue.add(rootNode);
 		
