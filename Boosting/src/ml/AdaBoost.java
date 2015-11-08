@@ -40,11 +40,13 @@ public class AdaBoost {
 			ArrayList<Feature> features = decisionStamp.fetchFeaturePosThreshold(trainDPList);
 			formInitialDataDistribution(dataPointPerFold, currentFoldCount);
 			
+			ArrayList<Double> trainErrors = new ArrayList<Double>();
 			ArrayList<Node> rootNodes = new ArrayList<Node>();
 			ArrayList<Double> alphas = new ArrayList<Double>();
+			ArrayList<Double> weightedErrors = new ArrayList<Double>();
 			int weakLearnerCount = 0;
 			
-			while(weakLearnerCount <= 100){
+			while(weakLearnerCount < 100){
 				
 				System.out.println("Weak Learner Count :" + weakLearnerCount);
 				
@@ -62,6 +64,7 @@ public class AdaBoost {
 						trainDataDistribution);
 				
 				Double weighedError = (Double)returnMap.get(Constant.ERROR_VALUE);
+				weightedErrors.add(weighedError);
 				System.out.println("Weighted Error " + weighedError);
 				// Calculate the alpha
 				
@@ -73,15 +76,20 @@ public class AdaBoost {
 				updateDataDistribution(returnMap);	
 				rootNodes.add(rootNode);
 				alphas.add(alpha);
-				
+				trainErrors.add(validateTrainData(rootNodes, alphas, trainDataMatrix));
 				weakLearnerCount++;
 			}
+			// Print the Results
 			validateTestData(rootNodes, alphas, testDataMatrix);
+			System.out.println("Train Error Data");
+			System.out.println(trainErrors);
+			System.out.println("Round Error per Iteration");
+			System.out.println(weightedErrors);
 			break;
 		}
 		
-		// Print the Results
-		System.out.println("Final accuracy : "+ sumOfAccuracy/numOfFolds);
+
+		
 
 	}
 	
@@ -95,30 +103,87 @@ public class AdaBoost {
 		Integer numOfDP = testDataMatrix.getRowDimension();
 		int count = rootNodes.size();
 		int correctCount = 0;
+		ArrayList<Double> errorsList = new ArrayList<Double>();
 		
-		for(int i=0;i< numOfDP;i++){
+		for(int j = 0; j < count; j++){
+		
 			
-			Double score = 0d;
-			for(int j = 0; j < count; j++){
-				score += alphas.get(j) * 
-						DecisionStamp.predictionValue(testDataArray[i],rootNodes.get(j));
+			Double error = 0d;
+			correctCount = 0;
+			
+			for(int i=0;i< numOfDP;i++){
+				
+				Double score = 0d;
+				
+				for(int k = 0 ; k <= j; k++){
+					
+					score += alphas.get(k) * 
+							DecisionStamp.predictionValue(testDataArray[i],rootNodes.get(k));
+					
+				}
+				
+				double actualTargetValue = testDataArray[i][Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX];
+				double predictedValue = 0d;
+				
+				
+				if (score > 0)
+					predictedValue = 1d;
+				else
+					predictedValue = -1d;
+				
+				if(actualTargetValue == predictedValue)
+					correctCount++;
 			}
 			
-			double actualTargetValue = testDataArray[i][Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX];
-			double predictedValue = 0d;
-			
-			
-			if (score > 0)
-				predictedValue = 1d;
-			else
-				predictedValue = -1d;
-			
-			if(actualTargetValue == predictedValue)
-				correctCount++;
+			error = 1d - (double)correctCount/numOfDP;
+			errorsList.add(error);
 			
 		}
 		
 		System.out.println("Prediction Accuracy :" + ((double)correctCount/numOfDP));
+		System.out.println("Test Errors");
+		System.out.println(errorsList);
+		
+	}
+	
+	public static Double validateTrainData(ArrayList<Node> rootNodes, ArrayList<Double> alphas,
+			Matrix trainDataMatrix){
+		
+		
+		double trainDataArray[][] = trainDataMatrix.getArray();
+		
+		
+		Integer numOfDP = trainDataMatrix.getRowDimension();
+		int count = rootNodes.size();
+		int correctCount = 0;
+		
+		Double error = 0d;
+		
+		for(int i=0;i< numOfDP;i++){
+			correctCount = 0;
+			Double score = 0d;
+			
+			for(int j = 0; j < count; j++){
+					
+				score += alphas.get(j) * 
+						DecisionStamp.predictionValue(trainDataArray[i],rootNodes.get(j));
+				
+				double actualTargetValue = trainDataArray[i][Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX];
+				double predictedValue = 0d;
+				
+				if (score > 0)
+					predictedValue = 1d;
+				else
+					predictedValue = -1d;
+				
+				if(actualTargetValue == predictedValue)
+					correctCount++;
+			}
+		}
+		
+		error = 1d - (double)correctCount/numOfDP;
+		
+		return error;
 		
 	}
 	
