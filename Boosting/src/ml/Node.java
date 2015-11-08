@@ -1,11 +1,12 @@
 package ml;
 
 import java.util.ArrayList;
+import java.util.List;
 
 
 public class Node {
 
-	ArrayList<Integer> dataPoints;
+	List<Integer> dataPoints;
 	Boolean isLeaf;
 	Double thresholdValue;
 	Double labelValue;
@@ -17,10 +18,10 @@ public class Node {
 	Integer featureIndex;
 	Double entropy;
 	
-	public ArrayList<Integer> getDataPoints() {
+	public List<Integer> getDataPoints() {
 		return dataPoints;
 	}
-	public void setDataPoints(ArrayList<Integer> dataPoints) {
+	public void setDataPoints(List<Integer> dataPoints) {
 		this.dataPoints = dataPoints;
 	}
 	public Boolean getIsLeaf() {

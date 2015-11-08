@@ -20,7 +20,7 @@ import com.google.common.primitives.Doubles;
  * @author Darshan
  *
  */
-public class DecisionTree{
+public class DecisionStamp{
 
 	
 	private FileOperations fileOperations;
@@ -33,7 +33,7 @@ public class DecisionTree{
 	 * Constructor : Which fetches the Data Matrix from the source file
 	 * and creates the Matrix from it.
 	 */
-	public DecisionTree(){
+	public DecisionStamp(){
 		
 		// Create the mapping of DataPoint and its start byte code from the file 
 		fileOperations =  new FileOperations();
@@ -44,7 +44,7 @@ public class DecisionTree{
 	}
 	
 	
-	public void formDifferentDataPerFold(){
+	public HashMap<Integer,List<Integer>> formDifferentDataPerFold(){
 		
 		dataPointPerFold = new HashMap<Integer,List<Integer>>();
 		
@@ -58,15 +58,20 @@ public class DecisionTree{
 			dataPointPerFold.put(i, numbers);
 		}
 		
+		return dataPointPerFold;
+		
 	}
 	
 	
-	public HashMap<String,Matrix> formDataMatrixByFold(Integer numOfFolds,Integer currentFoldCount){
+	public HashMap<String,Object> formDataMatrixByFold(Integer numOfFolds,Integer currentFoldCount){
 		
-		HashMap<String,Matrix> matrixHashMap = new HashMap<String,Matrix>();
+		HashMap<String,Object> matrixHashMap = new HashMap<String,Object>();
 		
 		ArrayList<ArrayList<Double>> trainDataArrayList = new ArrayList<ArrayList<Double>>();
 		ArrayList<ArrayList<Double>> testDataArrayList = new ArrayList<ArrayList<Double>>();
+		
+		ArrayList<Integer> testDPList = new ArrayList<Integer>();
+		ArrayList<Integer> trainDPList = new ArrayList<Integer>();
 		
 		for(int i = 0; i < Constant.NBR_OF_FOLDS; i++){
 			
@@ -82,6 +87,7 @@ public class DecisionTree{
 					for(int j = 0 ; j <= Constant.NBR_OF_FEATURES;j++)
 						attribeValues.add(dataMatrix.get(rowCount, j));
 					trainDataArrayList.add(attribeValues);
+					trainDPList.add(rowCount);
 				}
 				
 			}else{
@@ -96,7 +102,9 @@ public class DecisionTree{
 					for(int j = 0 ; j <= Constant.NBR_OF_FEATURES;j++)
 						attribeValues.add(dataMatrix.get(rowCount, j));
 					testDataArrayList.add(attribeValues);
+					testDPList.add(rowCount);
 				}
+				
 				
 			}
 			
@@ -115,23 +123,24 @@ public class DecisionTree{
 		}
 		
 		for (int i = 0; i < nbrOfTestData; i++) {
-		    ArrayList<Double> row = trainDataArrayList.get(i);
+		    ArrayList<Double> row = testDataArrayList.get(i);
 		    testData[i] = Doubles.toArray(row);
 		}
 		
 		matrixHashMap.put(Constant.TRAIN, new Matrix(trainData));
 		matrixHashMap.put(Constant.TEST, new Matrix(testData));
 		
+		matrixHashMap.put(Constant.TRAIN_DP, trainDPList);
+		matrixHashMap.put(Constant.TEST_DP, testDPList);
+		
 		return matrixHashMap;
 	}
 	
-	public HashMap<String,Object> calculateEntropy(ArrayList<Integer> dataPoints, 
-			HashMap<Integer, Double> dataDistribution){
+	public HashMap<String,Object> calculateEntropy(List<Integer> dataPoints, 
+			HashMap<Integer,Double> dataDistribution){
 		
 		double sumOfSpamDataDistribution = 0;
 		double sumOfNonSpamDataDistribution = 0;
-		int numOfSpamInstant = 0;
-		int numOfNonSpamInstant = 0;
 		
 		HashMap<String,Object> entropyMap = new HashMap<String,Object>();
 		//System.out.println("Matrix # of rows :"+dataMatrix.getRowDimension());
@@ -140,25 +149,20 @@ public class DecisionTree{
 		for(Integer dataPoint : dataPoints){
 			if(dataMatrix.get(dataPoint,Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX) == 1){
 				sumOfSpamDataDistribution += dataDistribution.get(dataPoint);
-				numOfSpamInstant++;
 			}
 			else{
 				sumOfNonSpamDataDistribution += dataDistribution.get(dataPoint);
-				numOfNonSpamInstant++;
 			}
 		}
 
-		double spamProbability = sumOfSpamDataDistribution;
-		double hamProbability = sumOfNonSpamDataDistribution;
-		
-		Double entropy = -((spamProbability * log2(spamProbability)) + 
-				(hamProbability * log2(hamProbability)));
+		Double entropy = -((sumOfSpamDataDistribution * log2(sumOfSpamDataDistribution)) + 
+				(sumOfNonSpamDataDistribution * log2(sumOfNonSpamDataDistribution)));
 		
 		//System.out.println("Entropy : "+entropy);
 		
 		entropyMap.put(Constant.ENTROPY, entropy);
-		entropyMap.put(Constant.SPAM_COUNT, numOfSpamInstant);
-		entropyMap.put(Constant.HAM_COUNT, numOfNonSpamInstant);
+		entropyMap.put(Constant.SPAM_SUM_OF_DIST, sumOfSpamDataDistribution);
+		entropyMap.put(Constant.NON_SPAM_SUM_OF_DIST, sumOfNonSpamDataDistribution);
 		
 		return entropyMap;
 	}
@@ -177,8 +181,9 @@ public class DecisionTree{
 	}
 	
 	
-	public void formTrainDecisionTree(Node rootNode,Matrix trainDataMatrix, 
-			HashMap<Integer, Double> dataDistribution){
+	public void formTrainDecisionTree(Node rootNode, HashMap<String,Object> matrixHashMap, 
+			ArrayList<Feature> features,
+			HashMap<Integer,Double> dataDistribution){
 		
 		Integer exploredNodeCount = 0;
 		Integer exploredNodeLimit = 1;
@@ -197,7 +202,7 @@ public class DecisionTree{
 			Node currentNode = nodeQueue.poll();
 			exploredNodeCount++;
 		
-			splitNodeByBestFeaturethreshold(currentNode, dataDistribution);
+			splitNodeByBestFeaturethreshold(currentNode, dataDistribution, features);
 			
 			if(currentNode.getLeftChildNode() != null){
 				
@@ -217,13 +222,11 @@ public class DecisionTree{
 		
 	}
 	
-	public void splitNodeByBestFeaturethreshold(Node node, HashMap<Integer, Double> dataDistribution){
+	public void splitNodeByBestFeaturethreshold(Node node, HashMap<Integer, Double> dataDistribution,
+			ArrayList<Feature> features){
 		
-		Double parentNodeEntrpy = node.getEntropy();
-		ArrayList<Integer> currentNodeDataPoints = node.getDataPoints();
+		List<Integer> currentNodeDataPoints = node.getDataPoints();
 		Integer noOfCurrentNodeDataPoints = currentNodeDataPoints.size();
-		
-		ArrayList<Feature> features = fetchFeaturePosThreshold(dataMatrix,currentNodeDataPoints);
 		
 		HashMap<Integer,Double> infoGainPerFeatureBestThreshold = new HashMap<Integer,Double>();
 		HashMap<Integer,Integer> bestThresholdIndexPerFeature = new HashMap<Integer,Integer>();
@@ -317,29 +320,27 @@ public class DecisionTree{
 			}
 			
 			//TODO Only single method can return the best feature index
-			// Calculation of square error (SE)
 			
-			HashMap<Integer,Double> entropyPerThresholdValue = calculateEntropy(feature,
-					leftSideDPPerThreshold,rightSideDPPerThreshold,dataDistribution);
+			// Calculate Information Gain
 			
+			HashMap<Integer,Double> informationGainPerThresholdValue = calculateInformationGain(feature, 
+					leftSideDPPerThreshold, rightSideDPPerThreshold, dataDistribution);
 			
-			Iterator<Entry<Integer, Double>> entropyIterator = 
-					entropyPerThresholdValue.entrySet().iterator();
-			Double lowestEntropy = Double.POSITIVE_INFINITY;
+			Iterator<Entry<Integer, Double>> igIterator = 
+					informationGainPerThresholdValue.entrySet().iterator();
+			Double highestIG = Double.NEGATIVE_INFINITY;
 			Integer bestThresholdIndex=0;
 			
-			while(entropyIterator.hasNext()){
-				Entry<Integer, Double> entry = entropyIterator.next();
-				if(entry.getValue() < lowestEntropy){
-					lowestEntropy = entry.getValue();
+			while(igIterator.hasNext()){
+				Entry<Integer, Double> entry = igIterator.next();
+				if(entry.getValue() > highestIG){
+					highestIG = entry.getValue();
 					bestThresholdIndex = entry.getKey();
 				}
 			}
 			
 			bestThresholdIndexPerFeature.put(featureIndex,bestThresholdIndex);
-			
-			Double infoGain = parentNodeEntrpy - (double)(lowestEntropy/currentNodeDataPoints.size());
-			infoGainPerFeatureBestThreshold.put(featureIndex,infoGain);
+			infoGainPerFeatureBestThreshold.put(featureIndex,highestIG);
 			
 			/*
 			System.out.println("# of threshold values 	: " + thresholdValues.size());
@@ -366,30 +367,68 @@ public class DecisionTree{
 			
 		}
 		
-		//System.out.println("*********************ALL FEATURES SCANNED************");
-		Integer bestFeatureIndex = 0;
 		
-		Iterator<Entry<Integer, Double>> infoGainIterator = 
-				infoGainPerFeatureBestThreshold.entrySet().iterator();
-		Double maxValue = Double.NEGATIVE_INFINITY;
-		while(infoGainIterator.hasNext()){
+		createChildNodes(node,features,infoGainPerFeatureBestThreshold, bestThresholdIndexPerFeature, 
+				leftSideDPForFeaturesBestThreshold,rightSideDPForFeatureBestThreshold, dataDistribution);
+		
+	}
+	
+	
+	public HashMap<Integer,Double> calculateInformationGain(Feature feature,
+			HashMap<Integer,ArrayList<Integer>> leftDataPoints,
+			HashMap<Integer,ArrayList<Integer>> rightDataPoints,
+			HashMap<Integer, Double> dataDistribution){
+		
+		HashMap<Integer,Double> informationGainPerThresold = new HashMap<Integer,Double>();
+		
+		// Left side data point will be labeled as -1
+		// Right side data point will be labeled as 1
+		double leftSideLabel = -1d;
+		double rightSideLabel = 1d;
+		
+		List<Double> thresholdValues = feature.getThresholdValues();
+		
+		int noOfThresholdValues = thresholdValues.size();
+		
+		for(int i =0 ; i < noOfThresholdValues; i++){
 			
-			Entry<Integer, Double> entry = infoGainIterator.next();
-			if(entry.getValue() > maxValue){
-				maxValue = entry.getValue();
-				bestFeatureIndex = entry.getKey();
+			Double error = 0d;
+			
+			if(leftDataPoints.containsKey(i)){
+				
+				error += calculateError(leftDataPoints.get(i), dataDistribution, leftSideLabel);
+				
 			}
+			
+			if(rightDataPoints.containsKey(i)){
+				
+				error += calculateError(rightDataPoints.get(i), dataDistribution, rightSideLabel);
+				
+			}
+			
+			// In the binary classifier 0.9 error is actual 0.1 error if you flip the classifier label
+			// Information gain is |0.5  - error|
+			informationGainPerThresold.put(i, Math.abs(0.5 - error));
+			
 		}
-		Feature bestFeature = features.get(bestFeatureIndex);
 		
-		Integer bestThresholdValueIndex = bestThresholdIndexPerFeature.get(bestFeatureIndex);
-		node.setThresholdValue(bestFeature.getThresholdValues().get(bestThresholdValueIndex));
-		node.setFeatureIndex(bestFeatureIndex);
+		return informationGainPerThresold;
 		
+	}
+	
+	public Double calculateError(ArrayList<Integer> dataPoints, HashMap<Integer, Double> dataDistribution,
+			Double labelValue){
 		
-		//createChildNodes(node,features,infoGainPerFeatureBestThreshold, bestThresholdIndexPerFeature, 
-		//		leftSideDPForFeaturesBestThreshold,rightSideDPForFeatureBestThreshold, dataDistribution);
+		Double error = 0d;
 		
+		for(Integer dataPoint : dataPoints){
+			
+			if(labelValue != dataMatrix.get(dataPoint, Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX)){
+				error += dataDistribution.get(dataPoint);
+			}
+			
+		}
+		return error;
 	}
 	
 	public HashMap<Integer,Double> calculateEntropy(Feature feature,
@@ -414,7 +453,8 @@ public class DecisionTree{
 				HashMap<String,Object> entropyLeftSideMap = calculateEntropy(leftDataPoints.get(i),
 								normalizeDataDistribution(leftDataPoints.get(i),dataDistribution));
 				entropyOfLeftChild = (Double)entropyLeftSideMap.get(Constant.ENTROPY);
-				totalChildNodeEntroy += (entropyOfLeftChild * leftDataPoints.get(i).size());
+				totalChildNodeEntroy += (entropyOfLeftChild * sumDataDistribution(leftDataPoints.get(i),dataDistribution));
+				//totalChildNodeEntroy += (entropyOfLeftChild);
 			}
 			//System.out.println("Left side entropy : "+entropyOfLeftChild);
 			
@@ -425,7 +465,8 @@ public class DecisionTree{
 						calculateEntropy(rightDataPoints.get(i),
 								normalizeDataDistribution(rightDataPoints.get(i),dataDistribution));
 				entropyRightChild = (Double)entropyRightSideMap.get(Constant.ENTROPY);
-				totalChildNodeEntroy += (entropyRightChild * rightDataPoints.get(i).size());
+				totalChildNodeEntroy += (entropyRightChild * sumDataDistribution(rightDataPoints.get(i),dataDistribution));
+				//totalChildNodeEntroy += (entropyRightChild);
 			}
 			//System.out.println("Right side entropy : "+entropyRightChild);
 			
@@ -437,7 +478,7 @@ public class DecisionTree{
 		return entropyPerThreshold;
 	}
 	
-	public HashMap<Integer, Double> normalizeDataDistribution(ArrayList<Integer> dataPoints,
+	public HashMap<Integer, Double> normalizeDataDistribution(List<Integer> dataPoints,
 			HashMap<Integer, Double> dataDistribution){
 		
 		HashMap<Integer, Double> updatedDataDistribution = new HashMap<Integer, Double>();
@@ -461,8 +502,7 @@ public class DecisionTree{
 		return updatedDataDistribution;
 	}
 	
-	public ArrayList<Feature> fetchFeaturePosThreshold(Matrix dataMatrix, 
-			ArrayList<Integer> dataPoints){
+	public ArrayList<Feature> fetchFeaturePosThreshold(List<Integer> dataPoints){
 		
 		int noOfColumns = dataMatrix.getColumnDimension();
 		
@@ -560,22 +600,6 @@ public class DecisionTree{
 	}
 	
 	
-	/**
-	 * This method creates the child nodes for the given node.
-	 * 
-	 * @param node 		: The node for which child nodes need to be created.
-	 * @param features 	: The available features for the split
-	 * @param infoGainPerFeatureBestThreshold 	: HashMap which contains the feature index
-	 *  as key and the maximum information it can again after the split as value.
-	 * @param bestThresholdIndexPerFeature		:  HashMap which contains the feature index
-	 *  as key and the best threshold value for the feature as value.
-	 * @param leftSideDPForFeaturesBestThreshold	: HashMap which contains the feature
-	 * index as key and the Possible Data Points of the given node's left child if the node 
-	 * is split by the feature.
-	 * @param rightSideDPForFeatureBestThreshold	: HashMap which contains the feature
-	 * index as key and the Possible Data Points of the given node's right child if the node 
-	 * is split by the feature.
-	 */
 	public void createChildNodes(Node node,ArrayList<Feature> features, 
 			HashMap<Integer,Double> infoGainPerFeatureBestThreshold,
 			HashMap<Integer,Integer> bestThresholdIndexPerFeature,
@@ -615,46 +639,13 @@ public class DecisionTree{
 			//System.out.println("Best Threshold value	:" + bestFeature.getThresholdValues()
 			//	.get(bestThresholdIndexPerFeature.get(bestFeatureIndex)));
 			
-		if(leftSideDPForFeaturesBestThreshold.containsKey(bestFeatureIndex)){
-			
-			Node leftNode = new Node();
-			//System.out.println("Left child # of data points "
-			//				+leftSideDPForFeaturesBestThreshold.get(bestFeatureIndex).size());
-			leftNode.setDataPoints(leftSideDPForFeaturesBestThreshold.get(bestFeatureIndex));
-			//System.out.println(leftNode.getDataPoints().toString());
-			leftNode.setParentNode(node);
-			HashMap<String,Object> entropyMap = calculateEntropy(leftNode.getDataPoints(),
-					normalizeDataDistribution(leftNode.getDataPoints(),dataDistribution));
-			leftNode.setEntropy((Double)entropyMap.get(Constant.ENTROPY));
-			leftNode.setLabelValue(
-					((Integer)entropyMap.get(Constant.SPAM_COUNT) > 
-					(Integer)entropyMap.get(Constant.HAM_COUNT))?1d:0d);
-			//System.out.println("LEft label value :"+leftNode.getLabelValue());
-			//System.out.println("LEft node entropy :"+(Double)entropyMap.get(Constant.ENTROPY));
-			node.setLeftChildNode(leftNode);
-			
-		}
+		Node leftNode = new Node();
+		leftNode.setLabelValue(-1d);
+		node.setLeftChildNode(leftNode);
 		
-		if(rightSideDPForFeatureBestThreshold.containsKey(bestFeatureIndex)){
-			
-			Node rightNode = new Node();
-			//System.out.println("Right child # of data points "
-			//				+rightSideDPForFeatureBestThreshold.get(bestFeatureIndex).size());
-			rightNode.setDataPoints(rightSideDPForFeatureBestThreshold.get(bestFeatureIndex));
-			//System.out.println(rightNode.getDataPoints().toString());
-			rightNode.setParentNode(node);
-			
-			HashMap<String,Object> entropyMap = 
-					calculateEntropy(rightNode.getDataPoints(),
-							normalizeDataDistribution(rightNode.getDataPoints(),dataDistribution));
-			rightNode.setEntropy((Double)entropyMap.get(Constant.ENTROPY));
-			rightNode.setLabelValue(
-					((Integer)entropyMap.get(Constant.SPAM_COUNT) > 
-					(Integer)entropyMap.get(Constant.HAM_COUNT))?1d:0d);
-			//System.out.println("Right label value :"+rightNode.getLabelValue());
-			//System.out.println("Right node entropy :"+(Double)entropyMap.get(Constant.ENTROPY));
-			node.setRightChildNode(rightNode);
-		}
+		Node rightNode = new Node();
+		rightNode.setLabelValue(1d);
+		node.setRightChildNode(rightNode);
 			
 		//}
 		
@@ -695,8 +686,9 @@ public class DecisionTree{
 		}
 	}
 	
-	public HashMap<String, Object> calculateWeightedError(Matrix trainDataMatrix,Node rootNode,
-			HashMap<Integer, Double> dataDistribution){
+	public HashMap<String, Object> calculateWeightedError(Matrix trainDataMatrix, ArrayList<Integer> trainDPList, 
+			Node rootNode,
+			HashMap<Integer,Double> dataDistribution){
 		
 		HashMap<String, Object> returnObj = new HashMap<String, Object>();
 		double trainDataArray[][] = trainDataMatrix.getArray();
@@ -705,18 +697,21 @@ public class DecisionTree{
 		
 		Double error = 0d;
 		Integer numOfDP = trainDataMatrix.getRowDimension();
+		Integer dpIndex = 0;
 		for(int i=0;i< numOfDP;i++){
 			
-			if(validatePredictionValue(trainDataArray[i],rootNode) == 0){
+			dpIndex = trainDPList.get(i);
+			if(validatePredictionValue(trainDataArray[i],rootNode) == false){
 				
-				error += dataDistribution.get(i);
-				misClassifiedDataPoints.add(i);
+				error += dataDistribution.get(dpIndex);
+				misClassifiedDataPoints.add(dpIndex);
 				
 			}
 			else{
-				correctlyClassifiedDataPoints.add(i);
+				correctlyClassifiedDataPoints.add(dpIndex);
 			}
 		}
+		
 		returnObj.put(Constant.ERROR_VALUE, error);
 		returnObj.put(Constant.MISCLASSIFIED_DP, misClassifiedDataPoints);
 		returnObj.put(Constant.CORRECTLY_CLASSIFIED_DP, correctlyClassifiedDataPoints);
@@ -725,33 +720,6 @@ public class DecisionTree{
 		
 	}
 	
-	/**
-	 * This method evaluates the generated Decision Tree Model 
-	 * based upon the Test Data set.
-	 * 
-	 * @param testDataMatrix 	: The test Data Matrix
-	 * @param rootNode			: The root node of Decision Tree	
-	 * @return The accuracy of the Decision tree based upon the prediction
-	 * on the test Data Matrix.
-	 */
-	
-	public Double evaluateTestDataSet(Matrix testDataMatrix,Node rootNode){
-		
-		double testDataArray[][] = testDataMatrix.getArray();
-		
-		Double score = 0d;
-		Integer numOfDP = testDataMatrix.getRowDimension();
-		for(int i=0;i< numOfDP;i++){
-			score += validatePredictionValue(testDataArray[i],rootNode);
-		}
-		
-		Double accuracy = score / testDataMatrix.getRowDimension();
-		System.out.println("Match score :"+score);
-		System.out.println("# of Records :"+testDataMatrix.getRowDimension());
-		System.out.println("Accuracy :" + accuracy);
-		return accuracy;
-		
-	}
 
 	/**
 	 * 
@@ -760,7 +728,7 @@ public class DecisionTree{
 	 * @return			: 1 if the given decision tree can predict the target
 	 * value of the given data point correctly otherwise return 0
 	 */
-	public Integer validatePredictionValue(double dataValue[],Node rootNode){
+	public static Boolean validatePredictionValue(double dataValue[],Node rootNode){
 		
 		Node node = rootNode;
 		
@@ -782,10 +750,10 @@ public class DecisionTree{
 				//System.out.println("Actual value : "+ actualTargetValue 
 				//	+ " Predicted value :"+predictedTargetValue);
 				if(actualTargetValue == predictedTargetValue){
-					return 1;
+					return true;
 				}
 				else{
-					return 0;
+					return false;
 				}
 					
 			}
@@ -793,5 +761,50 @@ public class DecisionTree{
 		
 		
 	}
+	
+	public static Double predictionValue(double dataValue[],Node rootNode){
+		
+		Node node = rootNode;
+		
+		while(true){
+
+			if(node.getFeatureIndex() != null){
+				
+				Double featureValue = dataValue[node.getFeatureIndex()];
+				// Check whether flow should go to left or right
+				if(featureValue < node.getThresholdValue()){
+					node = node.getLeftChildNode();
+				}else{
+					node = node.getRightChildNode();
+				}
+				
+			}else{
+				
+				double predictedTargetValue = node.getLabelValue();
+				return predictedTargetValue;
+					
+			}
+		}
+		
+		
+	}
+	
+	public Matrix getDataMatrix(){
+		return dataMatrix;
+	}
+	
+	public Double sumDataDistribution(List<Integer> dataPoints, HashMap<Integer,Double> dataDistribution){
+		
+		double sum = 0d;
+		for(Integer dataPoint : dataPoints){
+			
+			sum += dataDistribution.get(dataPoint);
+			
+		}
+		
+		return sum;
+		
+	}
+
 
 }

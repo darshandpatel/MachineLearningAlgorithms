@@ -40,9 +40,11 @@ public class FileOperations {
 					String line = lineIterator.next();
 					if(!line.equals("")){
 						String parts[] = line.trim().split(splitOperator);
-						for(int i=0;i<parts.length;i++){
+						for(int i=0;i< parts.length;i++){
 							dataPoints[lineCounter][i] = Double.parseDouble(parts[i]);
 						}
+						if(dataPoints[lineCounter][parts.length-1] == 0)
+							dataPoints[lineCounter][parts.length-1] = -1d;
 						lineCounter++;
 					}
 				}

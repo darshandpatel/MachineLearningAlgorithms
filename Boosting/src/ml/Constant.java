@@ -8,6 +8,8 @@ public class Constant {
 	
 	public static String TRAIN = "TRAIN";
 	public static String TEST = "TEST";
+	public static String TRAIN_DP = "TRAIN_DP";
+	public static String TEST_DP = "TEST_DP";
 	public static String CATEGORICAL = "CATEGORICAL";
 	public static String NUMERIC = "NUMERIC";
 	public static String BINARY_NUM = "BINARY-NUM";
@@ -32,7 +34,9 @@ public class Constant {
 	public static Integer SPAMBASE_DATA_DEPTH_LIMIT = 0;
 	public static String ENTROPY = "entropy";
 	public static String SPAM_COUNT = "spam_count";
-	public static String HAM_COUNT = "ham_count";
+	public static String NON_SPAM_COUNT = "ham_count";
+	public static String SPAM_SUM_OF_DIST = "SPAM_SUM_OF_DIST";
+	public static String NON_SPAM_SUM_OF_DIST = "NON_SPAM_SUM_OF_DIST";
 	public static String ERROR_VALUE = "ERROR_VALUE";
 	public static String MISCLASSIFIED_DP = "MISCLASSIFIED_DP";
 	public static String CORRECTLY_CLASSIFIED_DP = "CORRECTLY_CLASSIFIED_DP";
