@@ -1,0 +1,223 @@
+package ml;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import Jama.Matrix;
+
+
+
+public class AdaBoost {
+	
+	static HashMap<Integer,Double> trainDataDistribution;
+	
+	public void performAdaBoosting(){
+		
+		DecisionTree decisionTree = new DecisionTree();
+		HashMap<Integer,List<Integer>> dataPointPerFold = decisionTree.formDifferentDataPerFold();
+		
+		// Number of fold will be created on the given Data Matrix;
+		int numOfFolds = 10;
+		int currentFoldCount = 0;
+		
+		// Total average accuracy of all the Decision Trees.
+		Double sumOfAccuracy = 0d;
+		
+		while(currentFoldCount < numOfFolds){
+			
+			System.out.println("===============================");
+			System.out.println("Fold count : " + currentFoldCount);
+			
+			HashMap<String,Object> matrixHashMap = decisionTree.formDataMatrixByFold(numOfFolds,currentFoldCount);
+			Matrix trainDataMatrix = (Matrix) matrixHashMap.get(Constant.TRAIN);
+			Matrix testDataMatrix = (Matrix) matrixHashMap.get(Constant.TEST);
+			
+			ArrayList<Integer> trainDPList = (ArrayList<Integer>) matrixHashMap.get(Constant.TRAIN_DP);
+			
+			ArrayList<Feature> features = decisionTree.fetchFeaturePosThreshold(trainDataMatrix,trainDPList);
+			formInitialDataDistribution(dataPointPerFold, currentFoldCount);
+			
+			ArrayList<Node> rootNodes = new ArrayList<Node>();
+			ArrayList<Double> alphas = new ArrayList<Double>();
+			int weakLearnerCount = 0;
+			
+			while(weakLearnerCount <= 100){
+				
+				System.out.println("Weak Learner Count :" + weakLearnerCount);
+				
+				// Apply the weak learner on the training Data set.
+				Node rootNode = new Node();
+				rootNode.setDataPoints(trainDPList);
+				HashMap<String,Object> entropyMap = decisionTree.calculateEntropy(rootNode.getDataPoints(),
+						trainDataDistribution);
+				rootNode.setEntropy((Double)entropyMap.get(Constant.ENTROPY));
+				
+				rootNode.setLabelValue(
+						((Double)entropyMap.get(Constant.SPAM_SUM_OF_DIST) > 
+						(Double)entropyMap.get(Constant.NON_SPAM_SUM_OF_DIST))?1d:0d);
+				
+				decisionTree.formTrainDecisionTree(rootNode, matrixHashMap, features, trainDataDistribution);
+				
+				//System.out.println("Print the Decision Tree");
+				//decisionTree.printDecisionTree(rootNode);
+
+				//Calculate the weighted error.
+				// Evaluate Decision Tree
+				HashMap<String, Object> returnMap = decisionTree.calculateWeightedError(trainDataMatrix, trainDPList, 
+						rootNode, 
+						trainDataDistribution);
+				
+				Double weighedError = (Double)returnMap.get(Constant.ERROR_VALUE);
+				System.out.println("Error " + weighedError);
+				// Calculate the alpha
+				
+				double alpha = (double)(1d/2d) * (Math.log((1 - weighedError) / weighedError));
+				System.out.println("Alpha :" + alpha);
+				returnMap.put(Constant.ALPHA_VALUE, alpha);
+
+				// Update the data distribution
+				updateDataDistribution(returnMap);	
+				rootNodes.add(rootNode);
+				alphas.add(alpha);
+				
+				weakLearnerCount++;
+			}
+			validateTestData(rootNodes, alphas, testDataMatrix);
+			break;
+		}
+		
+		// Print the Results
+		System.out.println("Final accuracy : "+ sumOfAccuracy/numOfFolds);
+
+	}
+	
+	public static void validateTestData(ArrayList<Node> rootNodes, ArrayList<Double> alphas,
+			Matrix testDataMatrix){
+		
+		
+		double testDataArray[][] = testDataMatrix.getArray();
+		
+		
+		Integer numOfDP = testDataMatrix.getRowDimension();
+		int count = rootNodes.size();
+		int correctCount = 0;
+		
+		for(int i=0;i< numOfDP;i++){
+			
+			Double score = 0d;
+			for(int j = 0; j < count; j++){
+				score += alphas.get(j) * 
+						DecisionTree.predictionValue(testDataArray[i],rootNodes.get(j));
+			}
+			
+			double actualTargetValue = testDataArray[i][Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX];
+			double predictedValue = 0d;
+			
+			if (score > 0.5)
+				predictedValue = 1d;
+			else
+				predictedValue = 0d;
+			
+			if(actualTargetValue == predictedValue)
+				correctCount++;
+			
+		}
+		
+		System.out.println("Prediction Accuracy :" + ((double)correctCount/numOfDP));
+		
+	}
+	
+	public static void formInitialDataDistribution(HashMap<Integer,List<Integer>> dataPointPerFold, Integer currentDataFold){
+		
+		trainDataDistribution = new HashMap<Integer, Double>();
+		
+		Iterator<Map.Entry<Integer,List<Integer>>> iterator = dataPointPerFold.entrySet().iterator();
+		int nbrOfTrainDP = 0;
+		while(iterator.hasNext()){
+			
+			Entry<Integer,List<Integer>> pair = iterator.next();
+			if(pair.getKey() != currentDataFold)
+				nbrOfTrainDP += pair.getValue().size();
+			
+		}
+		
+		iterator = dataPointPerFold.entrySet().iterator();
+		
+		while(iterator.hasNext()){
+			
+			Entry<Integer,List<Integer>> pair = iterator.next();
+			int turn = pair.getKey();
+			List<Integer> dataPoints = pair.getValue();
+			if(turn != currentDataFold){
+				for(Integer dataPoint : dataPoints){
+					trainDataDistribution.put(dataPoint, (double)(1.0d/nbrOfTrainDP));
+				}
+			}
+			
+		}
+		
+	}
+	
+	public static void updateDataDistribution(HashMap<String, Object> returnMap){
+		
+		
+		Double alpha = (Double) returnMap.get(Constant.ALPHA_VALUE);
+		List<Integer> misClassifiedDP = (List<Integer>) returnMap.get(Constant.MISCLASSIFIED_DP);
+		List<Integer> correctlyClassifiedDP = (List<Integer>) returnMap.get(Constant.CORRECTLY_CLASSIFIED_DP);
+		
+		int noOfTrainDP = misClassifiedDP.size() + correctlyClassifiedDP.size();
+		Double updatedDataDistirbution;
+		Double sumOfDistributionValue = 0d;
+		
+		//System.out.println("Old value for the miss classified data");
+		for(Integer dataPoint : misClassifiedDP){
+			
+			//System.out.print(dataPoint+":"+trainDataDistribution.get(dataPoint)+" ");
+			updatedDataDistirbution = trainDataDistribution.get(dataPoint) * Math.pow(Math.E,alpha);
+			sumOfDistributionValue += updatedDataDistirbution;
+			trainDataDistribution.put(dataPoint, updatedDataDistirbution);
+			
+		}
+		
+		for(Integer dataPoint : correctlyClassifiedDP){
+			
+			updatedDataDistirbution = trainDataDistribution.get(dataPoint) * Math.pow(Math.E,-alpha);
+			sumOfDistributionValue += updatedDataDistirbution;
+			trainDataDistribution.put(dataPoint, updatedDataDistirbution);
+			
+		}
+		
+		// Normalize the Distribution
+		for(Integer dataPoint : misClassifiedDP){
+			trainDataDistribution.put(dataPoint, trainDataDistribution.get(dataPoint)/sumOfDistributionValue);
+		}
+		
+		for(Integer dataPoint : correctlyClassifiedDP){
+			trainDataDistribution.put(dataPoint, trainDataDistribution.get(dataPoint)/sumOfDistributionValue);
+		}
+		
+		/*
+		System.out.println("New value for the miss classified data");
+		for(Integer dataPoint : misClassifiedDP){
+			
+			System.out.print(dataPoint+":"+trainDataDistribution.get(dataPoint)+" ");
+		}
+		*/
+		
+	}
+	
+	
+	public static void main(String args[]){
+		
+		AdaBoost adaBoost = new AdaBoost();
+		adaBoost.performAdaBoosting();
+		
+	}
+
+}
+
+
