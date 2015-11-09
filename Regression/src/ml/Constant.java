@@ -60,5 +60,8 @@ public class Constant {
 	public static String ENTROPY = "entropy";
 	public static String SPAM_COUNT = "spam_count";
 	public static String HAM_COUNT = "ham_count";
+	public static Integer NBR_OF_FOLDS = 10;
+	public static Double LEARNING_RATE = 0.1d;
+	public static Double THRESHOLD_VALUE = 0.1d;
 	// SPAM DATA SET CONSTANT ENDS	
 }
