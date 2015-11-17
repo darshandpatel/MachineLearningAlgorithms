@@ -8,6 +8,8 @@ public class Constant {
 	
 	public static String TRAIN = "TRAIN";
 	public static String TEST = "TEST";
+	public static String TARGET = "TARGET";
+	public static String ATTRIBUTES = "ATTRIBUTES";
 	public static String TRAIN_DP = "TRAIN_DP";
 	public static String TEST_DP = "TEST_DP";
 	public static String CATEGORICAL = "CATEGORICAL";
@@ -42,4 +44,38 @@ public class Constant {
 	public static String CORRECTLY_CLASSIFIED_DP = "CORRECTLY_CLASSIFIED_DP";
 	public static String ALPHA_VALUE = "ALPHA_VALUE";
 	// SPAM DATA SET CONSTANT ENDS	
+	
+	// HOUSING DATA SET CONSTANT STARTS
+	public static ArrayList<String> HOUSING_DATA_FEATURUES = new ArrayList<String>(
+			Arrays.asList("CRIM","ZN","INDUS","CHAS","NOX","RM","AGE","DIS","RAD","TAX","PTRATIO","B","LSTAT"));
+	
+	public static Integer HOUSING_DATA_NO_OF_FEATURES = HOUSING_DATA_FEATURUES.size();
+	
+	public static String HOUSING_DATA_FILE_PATH = 
+			"/Users/Darshan/Documents/MachineLearningAlgorithms/DecisionTree/src/data";
+	public static String HOUSING_TRAINDATA_FILE = "housing_train.txt";
+	//public static String TRAINDATA_FILE = "simple_data.txt";
+	public static String HOUSING_TESTDATA_FILE = "housing_test.txt";
+	
+	public static Integer HOUSING_DATA_NUM_OF_FEATURES = 13;
+	public static Integer HOUSING_DATA_NUM_OF_TRAINING_DP = 433;
+	public static Integer HOUSING_DATA_NUM_OF_TESTING_DP = 74;
+	public static Integer HOUSING_DATA_TARGET_VALUE_INDEX = 13;
+	
+	public static Double HOUSING_DATA_INFO_GAIN_THRESHOLD = 1d;
+	public static Double HOUSING_DATA_VARIANCE_THRESHOLD = 1d;
+	
+	public static Integer HOUSING_DATA_DEPTH_LIMIT = 2;
+	public static Double HOUSING_DATA_ERROR_THRESHOLD = 0.1d;
+	
+	// SPAM DATA SET CONSTANT STARTS
+
+	public static Integer SPAMBASE_DATA_NUM_OF_DP = 4601;
+	//4601
+	public static Integer SPAMBASE_DATA_NUM_OF_FEATURES = 57;
+	public static String HAM_COUNT = "ham_count";
+	public static Integer HOUSING_DATA_NUM_OF_CHILD_THRESHOLD = 15;
+	public static Double GRADIENT_BOOSTING_CONVERNGE_THRESHOLD = 10d;
+	public static String ROOT_NODE = "ROOT_NODE";
+	public static String PREDICTED_TARGET_MATRIX = "PREDICTED_TARGET_MATRIX";
 }

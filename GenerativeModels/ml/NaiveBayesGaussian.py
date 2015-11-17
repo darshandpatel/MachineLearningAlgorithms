@@ -285,6 +285,7 @@ class NaiveBayes:
             true_positive_rate.append(1.0)
             false_positive_rate.append(1.0)
 
+
             df = pd.DataFrame(dict(tpr=true_positive_rate, fpr=false_positive_rate))
             print(true_positive_rate)
             print(false_positive_rate)
