@@ -66,7 +66,10 @@ public class BasicRegressionTree {
 	public void formRegressionTree(){
 		
 		Integer exploredNodeCount = 0;
-		Integer exploredNodeLimit = (1 + (int)Math.pow(2,Constant.HOUSING_DATA_DEPTH_LIMIT));
+		Integer exploredNodeLimit = 1;
+		for(int i = 0; i < Constant.SPAMBASE_DATA_DEPTH_LIMIT; i++){
+			exploredNodeLimit += (int)Math.pow(2,i);
+		}
 		
 		// Form the tree until Node queue is not empty and the # of explored node 
 		// is less the # of explored node limit
@@ -654,6 +657,17 @@ public class BasicRegressionTree {
 			}
 		}
 		
+		
+	}
+	
+	public static void main(String args[]){
+		
+		// Basic Regression Tree
+		BasicRegressionTree basicRegressionTree = new BasicRegressionTree();
+		basicRegressionTree.formRegressionTree();
+		//System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+		basicRegressionTree.printRegressionTree();
+		basicRegressionTree.evaluateTestDataSet();
 		
 	}
 	

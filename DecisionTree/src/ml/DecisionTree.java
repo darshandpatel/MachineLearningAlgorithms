@@ -227,7 +227,7 @@ public class DecisionTree{
 		Integer exploredNodeCount = 0;
 		Integer exploredNodeLimit = 1;
 		for(int i = 0; i < Constant.SPAMBASE_DATA_DEPTH_LIMIT; i++){
-			exploredNodeLimit += (int)Math.pow(2,Constant.SPAMBASE_DATA_DEPTH_LIMIT);
+			exploredNodeLimit += (int)Math.pow(2,i);
 		}
 		Queue<Node> nodeQueue = new LinkedList<Node>();
 		nodeQueue.add(rootNode);
@@ -244,7 +244,6 @@ public class DecisionTree{
 			//currentNode.getDataPoints().size());
 			//System.out.println("Parent node entropy is 		:"+currentNode.getEntropy());
 			
-		
 			splitNodeByBestFeaturethreshold(currentNode);
 			
 			if(currentNode.getLeftChildNode() != null){
@@ -773,6 +772,13 @@ public class DecisionTree{
 			}
 		}
 		
+	}
+	
+	public static void main(String args[]){
+		
+		// Decision Tree
+		DecisionTree decisionTree = new DecisionTree();
+		decisionTree.formMultipleDecisionTrees();
 		
 	}
 
