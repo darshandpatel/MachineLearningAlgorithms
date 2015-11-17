@@ -52,7 +52,7 @@ public class Constant {
 	public static Integer HOUSING_DATA_NO_OF_FEATURES = HOUSING_DATA_FEATURUES.size();
 	
 	public static String HOUSING_DATA_FILE_PATH = 
-			"/Users/Darshan/Documents/MachineLearningAlgorithms/DecisionTree/src/data";
+			"/Users/Darshan/Documents/MachineLearningAlgorithms/Boosting/src/data";
 	public static String HOUSING_TRAINDATA_FILE = "housing_train.txt";
 	//public static String TRAINDATA_FILE = "simple_data.txt";
 	public static String HOUSING_TESTDATA_FILE = "housing_test.txt";
