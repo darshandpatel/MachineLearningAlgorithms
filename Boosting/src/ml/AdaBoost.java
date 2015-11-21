@@ -14,10 +14,21 @@ import Jama.Matrix;
 public class AdaBoost {
 	
 	static HashMap<Integer,Double> trainDataDistribution;
+	FileOperations fileOperations;
+	
+	public AdaBoost(){
+		fileOperations = new FileOperations();
+	}
+	
 	
 	public void performAdaBoosting(){
 		
-		DecisionStamp decisionStamp = new DecisionStamp();
+		Matrix dataMatrix = fileOperations.fetchDataPointsFromFile(
+				Constant.SPAMBASE_DATA_FILE_PATH,Constant.SPAMBASE_DATA_FILE_NAME,
+				Constant.NBR_OF_DP,Constant.NBR_OF_FEATURES + 1
+				,Constant.COMMA_REGEX);
+		
+		DecisionStamp decisionStamp = new DecisionStamp(dataMatrix);
 		HashMap<Integer,List<Integer>> dataPointPerFold = decisionStamp.formDifferentDataPerFold();
 		
 		// Number of fold will be created on the given Data Matrix;
@@ -31,11 +42,10 @@ public class AdaBoost {
 			
 			System.out.println("Fold count : " + currentFoldCount);
 			
-			HashMap<String,Object> matrixHashMap = decisionStamp.formDataMatrixByFold(numOfFolds,currentFoldCount);
-			Matrix trainDataMatrix = (Matrix) matrixHashMap.get(Constant.TRAIN);
-			Matrix testDataMatrix = (Matrix) matrixHashMap.get(Constant.TEST);
+			HashMap<String,List<Integer>> matrixHashMap = decisionStamp.formTrainTestDPByFold(numOfFolds,currentFoldCount);
 			
-			ArrayList<Integer> trainDPList = (ArrayList<Integer>) matrixHashMap.get(Constant.TRAIN_DP);
+			List<Integer> trainDPList = (List<Integer>) matrixHashMap.get(Constant.TRAIN_DP);
+			List<Integer> testDPList = (List<Integer>) matrixHashMap.get(Constant.TEST_DP);
 			
 			ArrayList<Feature> features = decisionStamp.fetchFeaturePosThreshold(trainDPList);
 			formInitialDataDistribution(dataPointPerFold, currentFoldCount);
@@ -54,14 +64,12 @@ public class AdaBoost {
 				Node rootNode = new Node();
 				rootNode.setDataPoints(trainDPList);
 
-				decisionStamp.formTrainDecisionTree(rootNode, matrixHashMap, features, trainDataDistribution);
+				decisionStamp.formTrainDecisionTree(rootNode, features, trainDataDistribution);
 				
-
 				//Calculate the weighted error.
 				// Evaluate Decision Tree
-				HashMap<String, Object> returnMap = decisionStamp.calculateWeightedError(trainDataMatrix, trainDPList, 
-						rootNode, 
-						trainDataDistribution);
+				HashMap<String, Object> returnMap = decisionStamp.calculateWeightedError(trainDPList, 
+						rootNode, trainDataDistribution);
 				
 				Double weighedError = (Double)returnMap.get(Constant.ERROR_VALUE);
 				weightedErrors.add(weighedError);
@@ -76,11 +84,11 @@ public class AdaBoost {
 				updateDataDistribution(returnMap);	
 				rootNodes.add(rootNode);
 				alphas.add(alpha);
-				trainErrors.add(validateTrainData(rootNodes, alphas, trainDataMatrix));
+				trainErrors.add(validateTrainData(rootNodes, alphas, testDPList, dataMatrix));
 				weakLearnerCount++;
 			}
 			// Print the Results
-			validateTestData(rootNodes, alphas, testDataMatrix);
+			validateTestData(rootNodes, alphas, testDPList, dataMatrix);
 			System.out.println("Train Error Data");
 			System.out.println(trainErrors);
 			System.out.println("Round Error per Iteration");
@@ -94,37 +102,32 @@ public class AdaBoost {
 	}
 	
 	public static void validateTestData(ArrayList<Node> rootNodes, ArrayList<Double> alphas,
-			Matrix testDataMatrix){
+			List<Integer> testDPList, Matrix dataMatrix){
 		
+		double dataArray[][] = dataMatrix.getArray();
 		
-		double testDataArray[][] = testDataMatrix.getArray();
-		
-		
-		Integer numOfDP = testDataMatrix.getRowDimension();
+		Integer numOfTestDP = testDPList.size();
 		int count = rootNodes.size();
 		int correctCount = 0;
 		ArrayList<Double> errorsList = new ArrayList<Double>();
 		
 		for(int j = 0; j < count; j++){
-		
 			
 			Double error = 0d;
 			correctCount = 0;
 			
-			for(int i=0;i< numOfDP;i++){
+			for(int i=0;i< numOfTestDP;i++){
 				
 				Double score = 0d;
+				Integer testDP = testDPList.get(i);
 				
 				for(int k = 0 ; k <= j; k++){
-					
 					score += alphas.get(k) * 
-							DecisionStamp.predictionValue(testDataArray[i],rootNodes.get(k));
-					
+							DecisionStamp.predictionValue(dataArray[testDP],rootNodes.get(k));
 				}
 				
-				double actualTargetValue = testDataArray[i][Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX];
+				double actualTargetValue = dataArray[testDP][Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX];
 				double predictedValue = 0d;
-				
 				
 				if (score > 0)
 					predictedValue = 1d;
@@ -135,55 +138,14 @@ public class AdaBoost {
 					correctCount++;
 			}
 			
-			error = 1d - (double)correctCount/numOfDP;
+			error = 1d - (double)correctCount/numOfTestDP;
 			errorsList.add(error);
 			
 		}
 		
-		System.out.println("Prediction Accuracy :" + ((double)correctCount/numOfDP));
+		System.out.println("Prediction Accuracy :" + ((double)correctCount/numOfTestDP));
 		System.out.println("Test Errors");
 		System.out.println(errorsList);
-		
-	}
-	
-	public static Double validateTrainData(ArrayList<Node> rootNodes, ArrayList<Double> alphas,
-			Matrix trainDataMatrix){
-		
-		
-		double trainDataArray[][] = trainDataMatrix.getArray();
-		
-		
-		Integer numOfDP = trainDataMatrix.getRowDimension();
-		int count = rootNodes.size();
-		int correctCount = 0;
-		
-		Double error = 0d;
-		
-		for(int i=0;i< numOfDP;i++){
-			correctCount = 0;
-			Double score = 0d;
-			
-			for(int j = 0; j < count; j++){
-					
-				score += alphas.get(j) * 
-						DecisionStamp.predictionValue(trainDataArray[i],rootNodes.get(j));
-				
-				double actualTargetValue = trainDataArray[i][Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX];
-				double predictedValue = 0d;
-				
-				if (score > 0)
-					predictedValue = 1d;
-				else
-					predictedValue = -1d;
-				
-				if(actualTargetValue == predictedValue)
-					correctCount++;
-			}
-		}
-		
-		error = 1d - (double)correctCount/numOfDP;
-		
-		return error;
 		
 	}
 	
@@ -214,6 +176,20 @@ public class AdaBoost {
 				}
 			}
 			
+		}
+		
+	}
+	
+	public static void formInitialDataDistribution(List<Integer> trainDPList){
+		
+		trainDataDistribution = new HashMap<Integer, Double>();
+		
+		int nbrOfTrainDP = trainDPList.size();
+		Iterator<Integer> iterator = trainDPList.iterator();
+		
+		while(iterator.hasNext()){
+			Integer dataPoint = iterator.next();
+			trainDataDistribution.put(dataPoint, (double)(1.0d/nbrOfTrainDP));
 		}
 		
 	}
@@ -268,6 +244,93 @@ public class AdaBoost {
 			System.out.print(dataPoint+":"+trainDataDistribution.get(dataPoint)+" ");
 		}
 		*/
+		
+	}
+	
+	public HashMap<String,Object> performAdaboosting(Matrix dataMatrix, List<Integer> trainDPList){
+		
+		int weakLearnerCount = 0;
+		
+		HashMap<String,Object> returnMap = new HashMap<String,Object>();
+		
+		DecisionStamp decisionStamp = new DecisionStamp(dataMatrix);
+		ArrayList<Feature> features = decisionStamp.fetchFeaturePosThreshold(trainDPList);
+		List<Node> rootNodes = new ArrayList<Node>();
+		ArrayList<Double> alphas = new ArrayList<Double>();
+		
+		formInitialDataDistribution(trainDPList);
+		
+		while(weakLearnerCount < 20){
+			
+			//System.out.println("Weak Learner Count :" + weakLearnerCount);
+			
+			// Apply the weak learner on the training Data set.
+			Node rootNode = new Node();
+			rootNode.setDataPoints(trainDPList);
+			
+			decisionStamp.formTrainDecisionTree(rootNode, features, trainDataDistribution);
+
+			//Calculate the weighted error.
+			// Evaluate Decision Tree
+			HashMap<String, Object> map = decisionStamp.calculateWeightedError(trainDPList, 
+					rootNode, trainDataDistribution);
+			
+			Double weighedError = (Double)map.get(Constant.ERROR_VALUE);
+			//System.out.println("Weighted Error " + weighedError);
+			// Calculate the alpha
+			double alpha = (double)(1d/2d) * (Math.log((1 - weighedError) / weighedError));
+			//System.out.println("Alpha :" + alpha);
+			map.put(Constant.ALPHA_VALUE, alpha);
+
+			// Update the data distribution
+			updateDataDistribution(map);	
+			rootNodes.add(rootNode);
+			alphas.add(alpha);
+			weakLearnerCount++;
+		}
+		
+		returnMap.put(Constant.ROOT_NODES, rootNodes);
+		returnMap.put(Constant.ALPHAS, alphas);
+		return returnMap;
+		
+	}
+	
+	public static Double validateTrainData(List<Node> rootNodes, List<Double> alphas,
+			List<Integer> testDPList, Matrix dataMatrix){
+		
+		Integer numOfTestDP = testDPList.size();
+		double dataArray[][] = dataMatrix.getArray();
+		int count = rootNodes.size();
+		int correctCount = 0;
+		
+		for(int i=0;i< numOfTestDP;i++){
+		
+			Double score = 0d;
+			
+			Integer testDP = testDPList.get(i);
+			
+			for(int j = 0; j < count; j++){	
+				
+				score += alphas.get(j) * 
+						DecisionStamp.predictionValue(dataArray[testDP],rootNodes.get(j));
+			
+				double actualTargetValue = dataArray[testDP][Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX];
+				double predictedValue = 0d;
+				
+				if (score > 0)
+					predictedValue = 1d;
+				else
+					predictedValue = -1d;
+				
+				if(actualTargetValue == predictedValue)
+					correctCount++;
+			}
+			
+		}
+		
+		System.out.println("Prediction Accuracy :" + ((double)correctCount/numOfTestDP));
+		Double error = 1d - (double)correctCount/numOfTestDP;
+		return error;
 		
 	}
 	

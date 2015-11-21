@@ -21,26 +21,12 @@ import com.google.common.primitives.Doubles;
  *
  */
 public class DecisionStamp{
-
 	
-	private FileOperations fileOperations;
 	Matrix dataMatrix;
 	HashMap<Integer,List<Integer>> dataPointPerFold;
 	
-	
-	
-	/**
-	 * Constructor : Which fetches the Data Matrix from the source file
-	 * and creates the Matrix from it.
-	 */
-	public DecisionStamp(){
-		
-		// Create the mapping of DataPoint and its start byte code from the file 
-		fileOperations =  new FileOperations();
-		dataMatrix =  fileOperations.fetchDataPointsFromFile(
-				Constant.SPAMBASE_DATA_FILE_PATH,Constant.SPAMBASE_DATA_FILE_NAME,
-				Constant.NBR_OF_DP,Constant.NBR_OF_FEATURES + 1
-				,Constant.COMMA_REGEX);
+	public DecisionStamp(Matrix dataMatrix){
+		this.dataMatrix = dataMatrix;
 	}
 	
 	
@@ -63,15 +49,12 @@ public class DecisionStamp{
 	}
 	
 	
-	public HashMap<String,Object> formDataMatrixByFold(Integer numOfFolds,Integer currentFoldCount){
+	public HashMap<String,List<Integer>> formTrainTestDPByFold(Integer numOfFolds,Integer currentFoldCount){
 		
-		HashMap<String,Object> matrixHashMap = new HashMap<String,Object>();
+		HashMap<String,List<Integer>> matrixHashMap = new HashMap<String,List<Integer>>();
 		
-		ArrayList<ArrayList<Double>> trainDataArrayList = new ArrayList<ArrayList<Double>>();
-		ArrayList<ArrayList<Double>> testDataArrayList = new ArrayList<ArrayList<Double>>();
-		
-		ArrayList<Integer> testDPList = new ArrayList<Integer>();
-		ArrayList<Integer> trainDPList = new ArrayList<Integer>();
+		List<Integer> testDPList = new ArrayList<Integer>();
+		List<Integer> trainDPList = new ArrayList<Integer>();
 		
 		for(int i = 0; i < Constant.NBR_OF_FOLDS; i++){
 			
@@ -83,10 +66,6 @@ public class DecisionStamp{
 				while(dataPointIterator.hasNext()){
 					
 					int rowCount = dataPointIterator.next();
-					ArrayList<Double> attribeValues = new ArrayList<Double>();
-					for(int j = 0 ; j <= Constant.NBR_OF_FEATURES;j++)
-						attribeValues.add(dataMatrix.get(rowCount, j));
-					trainDataArrayList.add(attribeValues);
 					trainDPList.add(rowCount);
 				}
 				
@@ -98,10 +77,6 @@ public class DecisionStamp{
 				while(dataPointIterator.hasNext()){
 					
 					int rowCount = dataPointIterator.next();
-					ArrayList<Double> attribeValues = new ArrayList<Double>();
-					for(int j = 0 ; j <= Constant.NBR_OF_FEATURES;j++)
-						attribeValues.add(dataMatrix.get(rowCount, j));
-					testDataArrayList.add(attribeValues);
 					testDPList.add(rowCount);
 				}
 				
@@ -109,26 +84,6 @@ public class DecisionStamp{
 			}
 			
 		}
-		
-		// Convert the ArrayList into 2 D array
-		double trainData[][] = new double[trainDataArrayList.size()][];
-		double testData[][] = new double[testDataArrayList.size()][];
-		
-		int nbrOFTrainData = trainDataArrayList.size();
-		int nbrOfTestData = testDataArrayList.size();
-		
-		for (int i = 0; i < nbrOFTrainData; i++) {
-		    ArrayList<Double> row = trainDataArrayList.get(i);
-		    trainData[i] = Doubles.toArray(row);
-		}
-		
-		for (int i = 0; i < nbrOfTestData; i++) {
-		    ArrayList<Double> row = testDataArrayList.get(i);
-		    testData[i] = Doubles.toArray(row);
-		}
-		
-		matrixHashMap.put(Constant.TRAIN, new Matrix(trainData));
-		matrixHashMap.put(Constant.TEST, new Matrix(testData));
 		
 		matrixHashMap.put(Constant.TRAIN_DP, trainDPList);
 		matrixHashMap.put(Constant.TEST_DP, testDPList);
@@ -181,7 +136,7 @@ public class DecisionStamp{
 	}
 	
 	
-	public void formTrainDecisionTree(Node rootNode, HashMap<String,Object> matrixHashMap, 
+	public void formTrainDecisionTree(Node rootNode, 
 			ArrayList<Feature> features,
 			HashMap<Integer,Double> dataDistribution){
 		
@@ -686,22 +641,22 @@ public class DecisionStamp{
 		}
 	}
 	
-	public HashMap<String, Object> calculateWeightedError(Matrix trainDataMatrix, ArrayList<Integer> trainDPList, 
-			Node rootNode,
-			HashMap<Integer,Double> dataDistribution){
+	
+	public HashMap<String, Object> calculateWeightedError(List<Integer> trainDPList, 
+			Node rootNode, HashMap<Integer,Double> dataDistribution){
 		
 		HashMap<String, Object> returnObj = new HashMap<String, Object>();
-		double trainDataArray[][] = trainDataMatrix.getArray();
+		double dataArray[][] = dataMatrix.getArray();
 		List<Integer> misClassifiedDataPoints = new ArrayList<Integer>();
 		List<Integer> correctlyClassifiedDataPoints = new ArrayList<Integer>();
 		
 		Double error = 0d;
-		Integer numOfDP = trainDataMatrix.getRowDimension();
+		Integer numOfDP = trainDPList.size();
 		Integer dpIndex = 0;
 		for(int i=0;i< numOfDP;i++){
 			
 			dpIndex = trainDPList.get(i);
-			if(validatePredictionValue(trainDataArray[i],rootNode) == false){
+			if(validatePredictionValue(dataArray[dpIndex],rootNode) == false){
 				
 				error += dataDistribution.get(dpIndex);
 				misClassifiedDataPoints.add(dpIndex);

@@ -77,5 +77,8 @@ public class Constant {
 	public static Integer HOUSING_DATA_NUM_OF_CHILD_THRESHOLD = 15;
 	public static Double GRADIENT_BOOSTING_CONVERNGE_THRESHOLD = 10d;
 	public static String ROOT_NODE = "ROOT_NODE";
+	public static String ROOT_NODES = "ROOT_NODES";
 	public static String PREDICTED_TARGET_MATRIX = "PREDICTED_TARGET_MATRIX";
+	public static String ALPHAS = "ALPHAS";
+	
 }
