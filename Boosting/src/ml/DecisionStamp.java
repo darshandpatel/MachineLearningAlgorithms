@@ -136,14 +136,13 @@ public class DecisionStamp{
 	}
 	
 	
-	public void formTrainDecisionTree(Node rootNode, 
-			ArrayList<Feature> features,
-			HashMap<Integer,Double> dataDistribution){
+	public void formTrainDecisionTree(Node rootNode, ArrayList<Feature> features,
+			HashMap<Integer,Double> dataDistribution, int treeDepthLimit, int targetIndexValue){
 		
 		Integer exploredNodeCount = 0;
 		Integer exploredNodeLimit = 1;
-		for(int i = 0; i < Constant.SPAMBASE_DATA_DEPTH_LIMIT; i++){
-			exploredNodeLimit += (int)Math.pow(2,Constant.SPAMBASE_DATA_DEPTH_LIMIT);
+		for(int i = 0; i < treeDepthLimit; i++){
+			exploredNodeLimit += (int)Math.pow(2,i);
 		}
 		
 		Queue<Node> nodeQueue = new LinkedList<Node>();
@@ -157,7 +156,7 @@ public class DecisionStamp{
 			Node currentNode = nodeQueue.poll();
 			exploredNodeCount++;
 		
-			splitNodeByBestFeaturethreshold(currentNode, dataDistribution, features);
+			splitNodeByBestFeaturethreshold(currentNode, dataDistribution, features, targetIndexValue);
 			
 			if(currentNode.getLeftChildNode() != null){
 				
@@ -178,7 +177,7 @@ public class DecisionStamp{
 	}
 	
 	public void splitNodeByBestFeaturethreshold(Node node, HashMap<Integer, Double> dataDistribution,
-			ArrayList<Feature> features){
+			ArrayList<Feature> features, Integer targetIndexValue){
 		
 		List<Integer> currentNodeDataPoints = node.getDataPoints();
 		Integer noOfCurrentNodeDataPoints = currentNodeDataPoints.size();
@@ -272,6 +271,39 @@ public class DecisionStamp{
 						}
 					}
 				}
+				
+			}else if(feature.getType().equals(Constant.CATEGORICAL)){
+				
+				for(int i= 0 ; i< noOfThresholdValues;i++){
+					
+					for(int k = 0 ; k < noOfCurrentNodeDataPoints ; k++){
+					
+						Integer dataPoint = currentNodeDataPoints.get(k);
+						Double trainFeatureValue = dataMatrix.get(dataPoint,featureIndex);
+					
+						//System.out.println("In side binary");
+						//System.out.println("# of different value "+ noOfThresholdValues);
+					
+						if(trainFeatureValue == thresholdValues.get(i)){
+							if(leftSideDPPerThreshold.containsKey(i)){
+								leftSideDPPerThreshold.get(i).add(dataPoint);
+							}else{
+								ArrayList<Integer> dataPoints = new ArrayList<Integer>();
+								dataPoints.add(dataPoint);
+								leftSideDPPerThreshold.put(i,dataPoints);
+							}
+						}else{
+							if(rightSideDPPerThreshold.containsKey(i)){
+								rightSideDPPerThreshold.get(i).add(dataPoint);
+							}else{
+								ArrayList<Integer> dataPoints = new ArrayList<Integer>();
+								dataPoints.add(dataPoint);
+								rightSideDPPerThreshold.put(i,dataPoints);
+							}
+						}
+					}
+				}
+				
 			}
 			
 			//TODO Only single method can return the best feature index
@@ -279,7 +311,7 @@ public class DecisionStamp{
 			// Calculate Information Gain
 			
 			HashMap<Integer,Double> informationGainPerThresholdValue = calculateInformationGain(feature, 
-					leftSideDPPerThreshold, rightSideDPPerThreshold, dataDistribution);
+					leftSideDPPerThreshold, rightSideDPPerThreshold, dataDistribution, targetIndexValue);
 			
 			Iterator<Entry<Integer, Double>> igIterator = 
 					informationGainPerThresholdValue.entrySet().iterator();
@@ -332,7 +364,7 @@ public class DecisionStamp{
 	public HashMap<Integer,Double> calculateInformationGain(Feature feature,
 			HashMap<Integer,ArrayList<Integer>> leftDataPoints,
 			HashMap<Integer,ArrayList<Integer>> rightDataPoints,
-			HashMap<Integer, Double> dataDistribution){
+			HashMap<Integer, Double> dataDistribution, Integer targetIndexValue){
 		
 		HashMap<Integer,Double> informationGainPerThresold = new HashMap<Integer,Double>();
 		
@@ -351,13 +383,13 @@ public class DecisionStamp{
 			
 			if(leftDataPoints.containsKey(i)){
 				
-				error += calculateError(leftDataPoints.get(i), dataDistribution, leftSideLabel);
+				error += calculateError(leftDataPoints.get(i), dataDistribution, leftSideLabel, targetIndexValue);
 				
 			}
 			
 			if(rightDataPoints.containsKey(i)){
 				
-				error += calculateError(rightDataPoints.get(i), dataDistribution, rightSideLabel);
+				error += calculateError(rightDataPoints.get(i), dataDistribution, rightSideLabel, targetIndexValue);
 				
 			}
 			
@@ -372,13 +404,13 @@ public class DecisionStamp{
 	}
 	
 	public Double calculateError(ArrayList<Integer> dataPoints, HashMap<Integer, Double> dataDistribution,
-			Double labelValue){
+			Double labelValue, Integer targetIndexValue){
 		
 		Double error = 0d;
 		
 		for(Integer dataPoint : dataPoints){
 			
-			if(labelValue != dataMatrix.get(dataPoint, Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX)){
+			if(labelValue != dataMatrix.get(dataPoint, targetIndexValue)){
 				error += dataDistribution.get(dataPoint);
 			}
 			
@@ -457,7 +489,9 @@ public class DecisionStamp{
 		return updatedDataDistribution;
 	}
 	
-	public ArrayList<Feature> fetchFeaturePosThreshold(List<Integer> dataPoints){
+	
+	public ArrayList<Feature> fetchFeaturePosThreshold(List<Integer> dataPoints, 
+			HashMap<Integer,String> attributeMapping){
 		
 		int noOfColumns = dataMatrix.getColumnDimension();
 		
@@ -483,18 +517,19 @@ public class DecisionStamp{
 					featurePosThreshold.put(i,values);
 				}
 			}
- 
-			List<Double> values = featurePosThreshold.get(i);
-			double minValue = values.stream().mapToDouble(p -> p).min().getAsDouble();
-			values.add(minValue - 1);
 			
-			double maxValue = values.stream().mapToDouble(p -> p).max().getAsDouble();
-			values.add(maxValue + 1);
+			if(attributeMapping.get(i) == Constant.NUMERIC){
+				List<Double> values = featurePosThreshold.get(i);
+				double minValue = values.stream().mapToDouble(p -> p).min().getAsDouble();
+				values.add(minValue - 1);
+				
+				double maxValue = values.stream().mapToDouble(p -> p).max().getAsDouble();
+				values.add(maxValue + 1);
+			}
 			
 		}
 		
-		
-		return createFeatures(featurePosThreshold);
+		return createFeatures(featurePosThreshold,attributeMapping);
 		
 	}
 	
@@ -505,19 +540,21 @@ public class DecisionStamp{
 	 * @return The ArrayList of feature objects.
 	 */
 	private ArrayList<Feature> createFeatures(HashMap<Integer,List<Double>> 
-			featuresPosThreshold){
+			featuresPosThreshold, HashMap<Integer,String> attributeMapping){
 	
 		ArrayList<Feature> features = new ArrayList<Feature>();
-		for(int i = 0; i < Constant.NBR_OF_FEATURES;i++){
+		int nbrOfFeature = attributeMapping.size();
+		for(int i = 0; i < nbrOfFeature;i++){
 			
-			String featureCtg = null;
+			String featureCtg = attributeMapping.get(i);
 			
 			List<Double> calculatedFeaturePosCriValues = featuresPosThreshold.get(i);
-			Collections.sort(calculatedFeaturePosCriValues);
 			
-			featureCtg = Constant.NUMERIC;
-			calculatedFeaturePosCriValues = filterFeaturePosThreshold
-				(calculatedFeaturePosCriValues);
+			if(featureCtg.equals(Constant.NUMERIC)){
+				Collections.sort(calculatedFeaturePosCriValues);
+				calculatedFeaturePosCriValues = filterFeaturePosThreshold
+						(calculatedFeaturePosCriValues);
+			}
 			
 			Feature feature = new Feature(featureCtg,calculatedFeaturePosCriValues,i);
 			//System.out.println("Feature values" + calculatedFeaturePosCriValues.toString());
@@ -643,7 +680,7 @@ public class DecisionStamp{
 	
 	
 	public HashMap<String, Object> calculateWeightedError(List<Integer> trainDPList, 
-			Node rootNode, HashMap<Integer,Double> dataDistribution){
+			Node rootNode, HashMap<Integer,Double> dataDistribution, Integer targetValueIndex){
 		
 		HashMap<String, Object> returnObj = new HashMap<String, Object>();
 		double dataArray[][] = dataMatrix.getArray();
@@ -656,7 +693,7 @@ public class DecisionStamp{
 		for(int i=0;i< numOfDP;i++){
 			
 			dpIndex = trainDPList.get(i);
-			if(validatePredictionValue(dataArray[dpIndex],rootNode) == false){
+			if(validatePredictionValue(dataArray[dpIndex],rootNode, targetValueIndex) == false){
 				
 				error += dataDistribution.get(dpIndex);
 				misClassifiedDataPoints.add(dpIndex);
@@ -680,10 +717,11 @@ public class DecisionStamp{
 	 * 
 	 * @param dataValue : The single Data Point from the test Data Matrix.
 	 * @param rootNode	: The root Node of the Decision Tree
+	 * @param targetValueIndex : The index of target value in Data Matrix 
 	 * @return			: 1 if the given decision tree can predict the target
 	 * value of the given data point correctly otherwise return 0
 	 */
-	public static Boolean validatePredictionValue(double dataValue[],Node rootNode){
+	public static Boolean validatePredictionValue(double dataValue[],Node rootNode, Integer targetValueIndex){
 		
 		Node node = rootNode;
 		
@@ -700,7 +738,7 @@ public class DecisionStamp{
 				}
 				
 			}else{
-				double actualTargetValue = dataValue[Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX];
+				double actualTargetValue = dataValue[targetValueIndex];
 				double predictedTargetValue = node.getLabelValue();
 				//System.out.println("Actual value : "+ actualTargetValue 
 				//	+ " Predicted value :"+predictedTargetValue);

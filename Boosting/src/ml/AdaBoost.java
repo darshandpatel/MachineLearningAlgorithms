@@ -1,11 +1,15 @@
 package ml;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Map.Entry;
+
+import com.google.common.primitives.Ints;
 
 import Jama.Matrix;
 
@@ -22,6 +26,11 @@ public class AdaBoost {
 	
 	
 	public void performAdaBoosting(){
+		
+		HashMap<Integer,String> attributeType = new HashMap<Integer,String>();
+		for(int i=0;i<Constant.NBR_OF_FEATURES;i++){
+			attributeType.put(i, Constant.NUMERIC);
+		}
 		
 		Matrix dataMatrix = fileOperations.fetchDataPointsFromFile(
 				Constant.SPAMBASE_DATA_FILE_PATH,Constant.SPAMBASE_DATA_FILE_NAME,
@@ -47,7 +56,7 @@ public class AdaBoost {
 			List<Integer> trainDPList = (List<Integer>) matrixHashMap.get(Constant.TRAIN_DP);
 			List<Integer> testDPList = (List<Integer>) matrixHashMap.get(Constant.TEST_DP);
 			
-			ArrayList<Feature> features = decisionStamp.fetchFeaturePosThreshold(trainDPList);
+			ArrayList<Feature> features = decisionStamp.fetchFeaturePosThreshold(trainDPList,attributeType);
 			formInitialDataDistribution(dataPointPerFold, currentFoldCount);
 			
 			ArrayList<Double> trainErrors = new ArrayList<Double>();
@@ -64,12 +73,13 @@ public class AdaBoost {
 				Node rootNode = new Node();
 				rootNode.setDataPoints(trainDPList);
 
-				decisionStamp.formTrainDecisionTree(rootNode, features, trainDataDistribution);
+				decisionStamp.formTrainDecisionTree(rootNode, features, trainDataDistribution,Constant.SPAMBASE_DATA_DEPTH_LIMIT,
+						Constant.BAL_DATA_TARGET_VALUE_INDEX);
 				
 				//Calculate the weighted error.
 				// Evaluate Decision Tree
 				HashMap<String, Object> returnMap = decisionStamp.calculateWeightedError(trainDPList, 
-						rootNode, trainDataDistribution);
+						rootNode, trainDataDistribution, Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX);
 				
 				Double weighedError = (Double)returnMap.get(Constant.ERROR_VALUE);
 				weightedErrors.add(weighedError);
@@ -88,7 +98,7 @@ public class AdaBoost {
 				weakLearnerCount++;
 			}
 			// Print the Results
-			validateTestData(rootNodes, alphas, testDPList, dataMatrix);
+			validateTestData(rootNodes, alphas, testDPList, dataMatrix, Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX);
 			System.out.println("Train Error Data");
 			System.out.println(trainErrors);
 			System.out.println("Round Error per Iteration");
@@ -102,7 +112,7 @@ public class AdaBoost {
 	}
 	
 	public static void validateTestData(ArrayList<Node> rootNodes, ArrayList<Double> alphas,
-			List<Integer> testDPList, Matrix dataMatrix){
+			List<Integer> testDPList, Matrix dataMatrix, Integer targetValueIndex){
 		
 		double dataArray[][] = dataMatrix.getArray();
 		
@@ -126,7 +136,7 @@ public class AdaBoost {
 							DecisionStamp.predictionValue(dataArray[testDP],rootNodes.get(k));
 				}
 				
-				double actualTargetValue = dataArray[testDP][Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX];
+				double actualTargetValue = dataArray[testDP][targetValueIndex];
 				double predictedValue = 0d;
 				
 				if (score > 0)
@@ -247,20 +257,26 @@ public class AdaBoost {
 		
 	}
 	
-	public HashMap<String,Object> performAdaboosting(Matrix dataMatrix, List<Integer> trainDPList){
+	public HashMap<String,Object> performAdaboosting(Matrix dataMatrix, List<Integer> trainDPList,
+			int nbrOfAllowedWeakLearner){
 		
 		int weakLearnerCount = 0;
 		
 		HashMap<String,Object> returnMap = new HashMap<String,Object>();
 		
+		HashMap<Integer,String> attributeType = new HashMap<Integer,String>();
+		for(int i=0;i<Constant.NBR_OF_FEATURES;i++){
+			attributeType.put(i, Constant.NUMERIC);
+		}
+		
 		DecisionStamp decisionStamp = new DecisionStamp(dataMatrix);
-		ArrayList<Feature> features = decisionStamp.fetchFeaturePosThreshold(trainDPList);
+		ArrayList<Feature> features = decisionStamp.fetchFeaturePosThreshold(trainDPList,attributeType);
 		List<Node> rootNodes = new ArrayList<Node>();
 		ArrayList<Double> alphas = new ArrayList<Double>();
 		
 		formInitialDataDistribution(trainDPList);
 		
-		while(weakLearnerCount < 20){
+		while(weakLearnerCount < nbrOfAllowedWeakLearner){
 			
 			//System.out.println("Weak Learner Count :" + weakLearnerCount);
 			
@@ -268,12 +284,13 @@ public class AdaBoost {
 			Node rootNode = new Node();
 			rootNode.setDataPoints(trainDPList);
 			
-			decisionStamp.formTrainDecisionTree(rootNode, features, trainDataDistribution);
+			decisionStamp.formTrainDecisionTree(rootNode, features, trainDataDistribution,Constant.SPAMBASE_DATA_DEPTH_LIMIT,
+					Constant.BAL_DATA_TARGET_VALUE_INDEX);
 
 			//Calculate the weighted error.
 			// Evaluate Decision Tree
 			HashMap<String, Object> map = decisionStamp.calculateWeightedError(trainDPList, 
-					rootNode, trainDataDistribution);
+					rootNode, trainDataDistribution, Constant.SPAMBASE_DATA_TARGET_VALUE_INDEX);
 			
 			Double weighedError = (Double)map.get(Constant.ERROR_VALUE);
 			//System.out.println("Weighted Error " + weighedError);
@@ -293,6 +310,76 @@ public class AdaBoost {
 		returnMap.put(Constant.ALPHAS, alphas);
 		return returnMap;
 		
+	}
+	
+	public Matrix mergetAttributeTargetMatrix(Matrix attributeMatrix, Matrix targetMatrix){
+		
+		int nbrOfDP = attributeMatrix.getRowDimension();
+		int nbrOfColumn = attributeMatrix.getColumnDimension() + 1;
+		
+		double dataMatrix[][] = new double[nbrOfDP][nbrOfColumn];
+		
+		for(int i = 0; i < nbrOfDP ; i++){
+			
+			for(int j=0;j<nbrOfColumn-1;j++){
+				dataMatrix[i][j] = attributeMatrix.get(i, j);
+			}
+			dataMatrix[i][nbrOfColumn-1] = targetMatrix.get(i, 0);
+		}
+		
+		return new Matrix(dataMatrix);
+		
+	}
+	public HashMap<String,Object> performAdaboosting(Matrix attributeMatrix, Matrix targetMatrix, List<Integer> trainDPList,
+			HashMap<Integer,String> attributeType, int nbrOfallowedWeakLeaner){
+		
+		int weakLearnerCount = 0;
+		
+		Matrix dataMatrix = mergetAttributeTargetMatrix(attributeMatrix, targetMatrix);
+		
+		HashMap<String,Object> returnMap = new HashMap<String,Object>();
+		
+		DecisionStamp decisionStamp = new DecisionStamp(dataMatrix);
+		ArrayList<Feature> features = decisionStamp.fetchFeaturePosThreshold(trainDPList,attributeType);
+		List<Node> rootNodes = new ArrayList<Node>();
+		ArrayList<Double> alphas = new ArrayList<Double>();
+		
+		formInitialDataDistribution(trainDPList);
+		
+		while(weakLearnerCount < nbrOfallowedWeakLeaner){
+			
+			//System.out.println("Weak Learner Count :" + weakLearnerCount);
+			
+			// Apply the weak learner on the training Data set.
+			Node rootNode = new Node();
+			rootNode.setDataPoints(trainDPList);
+			
+			decisionStamp.formTrainDecisionTree(rootNode, features, trainDataDistribution,Constant.SPAMBASE_DATA_DEPTH_LIMIT,
+					Constant.BAL_DATA_TARGET_VALUE_INDEX);
+
+			//Calculate the weighted error.
+			// Evaluate Decision Tree
+			HashMap<String, Object> map = decisionStamp.calculateWeightedError(trainDPList, 
+					rootNode, trainDataDistribution, Constant.BAL_DATA_TARGET_VALUE_INDEX);
+			
+			Double weighedError = (Double)map.get(Constant.ERROR_VALUE);
+			//System.out.println("Weighted Error " + weighedError);
+			// Calculate the alpha
+			double alpha = (double)(1d/2d) * (Math.log((1 - weighedError) / weighedError));
+			//System.out.println("Alpha :" + alpha);
+			map.put(Constant.ALPHA_VALUE, alpha);
+
+			// Update the data distribution
+			updateDataDistribution(map);	
+			rootNodes.add(rootNode);
+			alphas.add(alpha);
+			weakLearnerCount++;
+		}
+		
+		returnMap.put(Constant.ROOT_NODES, rootNodes);
+		returnMap.put(Constant.ALPHAS, alphas);
+		return returnMap;
+
 	}
 	
 	public static Double validateTrainData(List<Node> rootNodes, List<Double> alphas,
@@ -334,11 +421,169 @@ public class AdaBoost {
 		
 	}
 	
+	public void performAdaBoostOnUCIDS(){
+		
+		HashMap<Integer,HashMap<String,Double>> mapping = new HashMap<Integer,HashMap<String,Double>>();
+		HashMap<String,Double> target = new HashMap<String,Double>();
+		target.put("L", 1d);
+		target.put("B", 2d);
+		target.put("R", 3d);
+		mapping.put(4, target);
+		
+		HashMap<Integer,String> attributeType = new HashMap<Integer,String>();
+		attributeType.put(0, Constant.CATEGORICAL);
+		attributeType.put(1, Constant.CATEGORICAL);
+		attributeType.put(2, Constant.CATEGORICAL);
+		attributeType.put(3, Constant.CATEGORICAL);
+		
+		
+		HashMap<String,Matrix> matrixHashMap = fileOperations.fetchAttributesTargetFromFile(
+				Constant.BOOSTING_FILE_PATH,Constant.MULTI_CLASS_FILE_NAME, 
+				Constant.BAL_DATA_NUM_OF_DP, Constant.BAL_DATA_NUM_OF_FEATURES, 
+				"\t",mapping);
+		Matrix attributeMatrix = matrixHashMap.get(Constant.ATTRIBUTES);
+		Matrix actualTargetMatrix = matrixHashMap.get(Constant.TARGET);
+		
+		System.out.println("Number of datapoints "+ attributeMatrix.getRowDimension());
+		// Select Train and test data randomly
+		// Train 80%
+		// Test 20%
+		HashMap<String,List<Integer>> hashMap = generateTrainTestDP(attributeMatrix.getRowDimension(), 80);
+		List<Integer> trainDPList = hashMap.get(Constant.TRAIN_DP);
+		List<Integer> testDPList = hashMap.get(Constant.TEST_DP);
+		
+		// Apply "multiclass" solution : one vs the others separately for each class.
+		
+		int count = 1;
+		int nbrOfallowedWeakLeaner = 20;
+		HashMap<Integer,HashMap<String,Object>> classifierPerClass = new HashMap<Integer,HashMap<String,Object>>(); 
+		while(count <= Constant.BAL_NBR_OF_CLASS){
+			
+			Matrix updatedTargetMatrix = modifiyTarget((Matrix)actualTargetMatrix.clone(), count);
+			HashMap<String,Object> returnedMap = performAdaboosting(attributeMatrix, updatedTargetMatrix, 
+					trainDPList, attributeType, nbrOfallowedWeakLeaner);
+			classifierPerClass.put(count, returnedMap);
+			count++;
+		}
+		
+		// Validate Model on Test Data
+		validateTestData(classifierPerClass, testDPList, 
+				mergetAttributeTargetMatrix(attributeMatrix, actualTargetMatrix),
+				Constant.BAL_DATA_TARGET_VALUE_INDEX);
+		
+	}
+	
+	public HashMap<String,List<Integer>> generateTrainTestDP(int nbrOfDP, int percentOfTrainingData){
+	
+		HashMap<String,List<Integer>> hashMap = new HashMap<String,List<Integer>>();
+		
+		int nbrOfAllowedTrainDP = nbrOfDP * percentOfTrainingData / 100;
+		int randomDP[] = new Random().ints(0,nbrOfDP).distinct()
+                .limit(nbrOfDP).toArray();
+		
+		int trainDP[] = Arrays.copyOfRange(randomDP,0,nbrOfAllowedTrainDP);
+		int testDP[] = Arrays.copyOfRange(randomDP,nbrOfAllowedTrainDP,nbrOfDP);
+		
+		hashMap.put(Constant.TRAIN_DP, new ArrayList(Ints.asList(trainDP)));
+		hashMap.put(Constant.TEST_DP, new ArrayList(Ints.asList(testDP)));
+		
+		return hashMap;
+			
+	}
+	
+	public Matrix modifiyTarget(Matrix targetMatrix, Integer selectedClass){
+		
+		double targetValue[][] = targetMatrix.getArray();
+		int nbrOfDP = targetMatrix.getRowDimension();
+		
+		for(int i = 0 ; i < nbrOfDP; i++){
+			
+			if(targetValue[i][0] != selectedClass){
+				targetValue[i][0] = -1d;
+			}
+			else{
+				targetValue[i][0] = 1d;
+			}
+		}
+		
+		return new Matrix (targetValue);
+	}
+	
+	public static HashMap<Integer,Double> initializeClassScore(int nbrOfClass){
+		
+		HashMap<Integer,Double> scorePerClass = new HashMap<Integer,Double>();
+		
+		for(int i=1; i<=nbrOfClass; i++){
+			scorePerClass.put(i, 0d);
+		}
+		
+		return scorePerClass;
+		
+	}
+	
+	public static void validateTestData(HashMap<Integer,HashMap<String,Object>> classifierPerClass,
+			List<Integer> testDPList, Matrix dataMatrix, Integer targetValueIndex){
+		
+		Integer numOfTestDP = testDPList.size();
+		double dataArray[][] = dataMatrix.getArray();
+		
+		int correctCount = 0;
+		
+		for(int i=0;i< numOfTestDP;i++){
+			
+			Integer testDP = testDPList.get(i);
+			int classCount = 1;
+			
+			HashMap<Integer,Double> scorePerClass = initializeClassScore(Constant.BAL_NBR_OF_CLASS);
+			
+			while(classCount <= Constant.BAL_NBR_OF_CLASS){
+				
+				HashMap<String,Object> returneMap = classifierPerClass.get(classCount);
+				
+				ArrayList<Node> rootNodes = (ArrayList<Node>)returneMap.get(Constant.ROOT_NODES);
+				ArrayList<Double> alphas = (ArrayList<Double>)returneMap.get(Constant.ALPHAS);
+				Double score = 0d;
+				int count = rootNodes.size();
+				
+				for(int j = 0; j < count; j++){
+					score += alphas.get(j) * 
+							DecisionStamp.predictionValue(dataArray[testDP],rootNodes.get(j));
+				}
+				
+				if(score > 0){
+					scorePerClass.put(classCount, scorePerClass.get(classCount) + 1);
+				}else{
+					
+					for(int n = 1; n <= Constant.BAL_NBR_OF_CLASS; n++){
+						if(n != classCount)
+							scorePerClass.put(n, scorePerClass.get(n) + 1);
+					}
+					
+				}
+				classCount++;
+			}
+			
+			double actualTargetValue = dataArray[testDP][targetValueIndex];
+			double predictedValue = 0d;
+			
+			// Find the class which has highest score
+			
+			predictedValue = (double)scorePerClass.entrySet().stream().max(
+					(entry1, entry2) -> entry1.getValue() > entry2.getValue() ? 1 : -1).get().getKey();
+			
+			if(actualTargetValue == predictedValue)
+				correctCount++;
+		}
+		
+		System.out.println("Prediction Accuracy :" + ((double)correctCount/numOfTestDP));
+		
+	}
+	
 	
 	public static void main(String args[]){
 		
 		AdaBoost adaBoost = new AdaBoost();
-		adaBoost.performAdaBoosting();
+		adaBoost.performAdaBoostOnUCIDS();
 		
 	}
 

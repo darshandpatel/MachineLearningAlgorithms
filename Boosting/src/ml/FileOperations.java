@@ -100,6 +100,63 @@ public class FileOperations {
 		matrixHashMap.put(Constant.TARGET, new Matrix(targetValues));
 		return matrixHashMap;
 	}
+	
+	/**
+	 * 
+	 * @param filePath	: Path of a source file
+	 * @param fileName	: Source file
+	 * @param numOfDP	: Number of data points inside the file
+	 * @param numOfAttribute	: Number of attribute inside the file
+	 * @param splitOperator		: The regular expression for the line split
+	 * @param mapping			: HashMap contains the mapping of features non numerical value
+	 * into numerical value
+	 * @return a matrix which contains the attribute and target values
+	 */
+	public HashMap<String,Matrix> fetchAttributesTargetFromFile(String filePath,String fileName,
+			Integer numOfDP,Integer numOfAttribute,String splitOperator, 
+			HashMap<Integer,HashMap<String, Double>> mapping){
+		
+		double attributeValues[][] = new double[numOfDP][numOfAttribute];
+		double targetValues[][] = new double[numOfDP][1];
+		
+		try{
+			
+			Path trainFilepath = Paths.get(filePath,fileName);
+			Integer lineCounter = 0;
+			try(Stream<String> lines = Files.lines(trainFilepath)){
+				Iterator<String> lineIterator = lines.iterator();
+				while(lineIterator.hasNext()){
+					String line = lineIterator.next();
+					if(!line.equals("")){
+						String parts[] = line.trim().split(splitOperator);
+						int targetValueIndex = parts.length - 1;
+						for(int i=0;i<targetValueIndex;i++){
+							if(mapping.containsKey(i)){
+								attributeValues[lineCounter][i] = mapping.get(i).get(parts[i]);
+							}else{
+								attributeValues[lineCounter][i] = Double.parseDouble(parts[i]);
+							}
+						}
+						if(mapping.containsKey(targetValueIndex)){
+							targetValues[lineCounter][0] = mapping.get(targetValueIndex).
+									get(parts[targetValueIndex].trim());
+						}else{
+							targetValues[lineCounter][0] = Double.parseDouble(parts[targetValueIndex]);
+						}
+						lineCounter++;
+					}
+				}
+			}
+			
+		}catch(IOException e){
+			System.out.println(e.getMessage());
+		}
+		HashMap<String,Matrix> matrixHashMap = new HashMap<String,Matrix>();
+		matrixHashMap.put(Constant.ATTRIBUTES, new Matrix(attributeValues));
+		matrixHashMap.put(Constant.TARGET, new Matrix(targetValues));
+		return matrixHashMap;
+	}
+	
 
 	
 }

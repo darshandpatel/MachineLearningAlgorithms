@@ -53,9 +53,17 @@ public class Constant {
 	
 	public static String HOUSING_DATA_FILE_PATH = 
 			"/Users/Darshan/Documents/MachineLearningAlgorithms/Boosting/src/data";
+	public static String BOOSTING_FILE_PATH = 
+			"/Users/Darshan/Documents/MachineLearningAlgorithms/Boosting/src/data";
+	public static String MULTI_CLASS_FILE_NAME ="bal.data";
 	public static String HOUSING_TRAINDATA_FILE = "housing_train.txt";
 	//public static String TRAINDATA_FILE = "simple_data.txt";
 	public static String HOUSING_TESTDATA_FILE = "housing_test.txt";
+	
+	public static Integer BAL_DATA_NUM_OF_FEATURES = 4;
+	public static Integer BAL_DATA_NUM_OF_DP = 625;
+	public static Integer BAL_NBR_OF_CLASS = 3;
+	public static Integer BAL_DATA_TARGET_VALUE_INDEX = 4;
 	
 	public static Integer HOUSING_DATA_NUM_OF_FEATURES = 13;
 	public static Integer HOUSING_DATA_NUM_OF_TRAINING_DP = 433;

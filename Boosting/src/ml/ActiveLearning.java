@@ -53,7 +53,7 @@ public class ActiveLearning {
 			
 			List<Integer> trainDPList = hashMap.get(Constant.TRAIN_DP);
 			List<Integer> testDPList = hashMap.get(Constant.TEST_DP);
-			
+			int nbrOfAllowedWeakLearner = 20;
 			do{
 				
 				int nbrOfTestDP = testDPList.size();
@@ -61,7 +61,7 @@ public class ActiveLearning {
 				
 				System.out.println("Number of training data "+ nbrOfTrainDP);
 				
-				HashMap<String, Object> resultMap = adaBoost.performAdaboosting(dataMatrix, trainDPList);
+				HashMap<String, Object> resultMap = adaBoost.performAdaboosting(dataMatrix, trainDPList, nbrOfAllowedWeakLearner);
 				
 				List<Node> rootNodes = (List<Node>) resultMap.get(Constant.ROOT_NODES);
 				List<Double> alphas = (List<Double>) resultMap.get(Constant.ALPHAS);
