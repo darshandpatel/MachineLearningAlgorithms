@@ -38,7 +38,8 @@ public class AdaBoost {
 				,Constant.COMMA_REGEX);
 		
 		DecisionStamp decisionStamp = new DecisionStamp(dataMatrix);
-		HashMap<Integer,List<Integer>> dataPointPerFold = decisionStamp.formDifferentDataPerFold();
+		HashMap<Integer,List<Integer>> dataPointPerFold = decisionStamp.formDifferentDataPerFold(
+				Constant.NBR_OF_DP, Constant.NBR_OF_FOLDS);
 		
 		// Number of fold will be created on the given Data Matrix;
 		int numOfFolds = 10;
@@ -331,7 +332,7 @@ public class AdaBoost {
 		
 	}
 	public HashMap<String,Object> performAdaboosting(Matrix attributeMatrix, Matrix targetMatrix, List<Integer> trainDPList,
-			HashMap<Integer,String> attributeType, int nbrOfallowedWeakLeaner){
+			HashMap<Integer,String> attributeType, int nbrOfallowedWeakLeaner, int treeDepth,int targetValueIndex){
 		
 		int weakLearnerCount = 0;
 		
@@ -354,13 +355,13 @@ public class AdaBoost {
 			Node rootNode = new Node();
 			rootNode.setDataPoints(trainDPList);
 			
-			decisionStamp.formTrainDecisionTree(rootNode, features, trainDataDistribution,Constant.SPAMBASE_DATA_DEPTH_LIMIT,
-					Constant.BAL_DATA_TARGET_VALUE_INDEX);
+			decisionStamp.formTrainDecisionTree(rootNode, features, trainDataDistribution,treeDepth,
+					targetValueIndex);
 
 			//Calculate the weighted error.
 			// Evaluate Decision Tree
 			HashMap<String, Object> map = decisionStamp.calculateWeightedError(trainDPList, 
-					rootNode, trainDataDistribution, Constant.BAL_DATA_TARGET_VALUE_INDEX);
+					rootNode, trainDataDistribution, targetValueIndex);
 			
 			Double weighedError = (Double)map.get(Constant.ERROR_VALUE);
 			//System.out.println("Weighted Error " + weighedError);
@@ -445,50 +446,70 @@ public class AdaBoost {
 		Matrix actualTargetMatrix = matrixHashMap.get(Constant.TARGET);
 		
 		System.out.println("Number of datapoints "+ attributeMatrix.getRowDimension());
+		
+		DecisionStamp decisionStamp = new DecisionStamp();
+		HashMap<Integer,List<Integer>> dataPointPerFold = decisionStamp.
+				formDifferentDataPerFold(Constant.BAL_DATA_NUM_OF_DP,Constant.NBR_OF_FOLDS);
+		
 		// Select Train and test data randomly
 		// Train 80%
 		// Test 20%
-		HashMap<String,List<Integer>> hashMap = generateTrainTestDP(attributeMatrix.getRowDimension(), 80);
-		List<Integer> trainDPList = hashMap.get(Constant.TRAIN_DP);
-		List<Integer> testDPList = hashMap.get(Constant.TEST_DP);
 		
-		// Apply "multiclass" solution : one vs the others separately for each class.
+		int currentFoldCount = 0;
+		List<Integer> trainDPList = null;
+		List<Integer> testDPList = null;
 		
-		int count = 1;
-		int nbrOfallowedWeakLeaner = 20;
-		HashMap<Integer,HashMap<String,Object>> classifierPerClass = new HashMap<Integer,HashMap<String,Object>>(); 
-		while(count <= Constant.BAL_NBR_OF_CLASS){
+		while(currentFoldCount < Constant.NBR_OF_FOLDS){
+		
+			// Apply "multiclass" solution : one vs the others separately for each class.
+			HashMap<String,List<Integer>> hashMap  = generateTrainTestData(dataPointPerFold,currentFoldCount);
+			trainDPList = hashMap.get(Constant.TRAIN_DP);
+			testDPList = hashMap.get(Constant.TEST_DP);
 			
-			Matrix updatedTargetMatrix = modifiyTarget((Matrix)actualTargetMatrix.clone(), count);
-			HashMap<String,Object> returnedMap = performAdaboosting(attributeMatrix, updatedTargetMatrix, 
-					trainDPList, attributeType, nbrOfallowedWeakLeaner);
-			classifierPerClass.put(count, returnedMap);
-			count++;
+			int count = 1;
+			int nbrOfallowedWeakLeaner = 100;
+			HashMap<Integer,HashMap<String,Object>> classifierPerClass = new HashMap<Integer,HashMap<String,Object>>(); 
+			while(count <= Constant.BAL_NBR_OF_CLASS){
+				
+				Matrix updatedTargetMatrix = modifiyTarget((Matrix)actualTargetMatrix.clone(), count);
+				HashMap<String,Object> returnedMap = performAdaboosting(attributeMatrix, updatedTargetMatrix, 
+						trainDPList, attributeType, nbrOfallowedWeakLeaner,0,Constant.BAL_DATA_TARGET_VALUE_INDEX);
+				classifierPerClass.put(count, returnedMap);
+				count++;
+				
+			}
+			
+			// Validate Model on Test Data
+			validateTestData(classifierPerClass, testDPList, 
+					mergetAttributeTargetMatrix(attributeMatrix, actualTargetMatrix),
+					Constant.BAL_DATA_TARGET_VALUE_INDEX);
+			currentFoldCount++;
 		}
-		
-		// Validate Model on Test Data
-		validateTestData(classifierPerClass, testDPList, 
-				mergetAttributeTargetMatrix(attributeMatrix, actualTargetMatrix),
-				Constant.BAL_DATA_TARGET_VALUE_INDEX);
 		
 	}
 	
-	public HashMap<String,List<Integer>> generateTrainTestDP(int nbrOfDP, int percentOfTrainingData){
-	
-		HashMap<String,List<Integer>> hashMap = new HashMap<String,List<Integer>>();
+	public HashMap<String,List<Integer>> generateTrainTestData(
+			HashMap<Integer,List<Integer>> hashMap, int currentFoldCount){
 		
-		int nbrOfAllowedTrainDP = nbrOfDP * percentOfTrainingData / 100;
-		int randomDP[] = new Random().ints(0,nbrOfDP).distinct()
-                .limit(nbrOfDP).toArray();
+		HashMap<String,List<Integer>> dpHashMap = new HashMap<String,List<Integer>>();
+		List<Integer> trainDPList = new ArrayList<Integer>();
+		List<Integer> testDPList = new ArrayList<Integer>();
 		
-		int trainDP[] = Arrays.copyOfRange(randomDP,0,nbrOfAllowedTrainDP);
-		int testDP[] = Arrays.copyOfRange(randomDP,nbrOfAllowedTrainDP,nbrOfDP);
+		Iterator<Map.Entry<Integer,List<Integer>>> iterator = hashMap.entrySet().iterator();
 		
-		hashMap.put(Constant.TRAIN_DP, new ArrayList(Ints.asList(trainDP)));
-		hashMap.put(Constant.TEST_DP, new ArrayList(Ints.asList(testDP)));
-		
-		return hashMap;
+		while(iterator.hasNext()){
 			
+			Entry<Integer,List<Integer>> entry = iterator.next();
+			if(currentFoldCount != entry.getKey()){
+				trainDPList.addAll(entry.getValue());
+			}else{
+				testDPList.addAll(entry.getValue());
+			}
+		}
+		dpHashMap.put(Constant.TRAIN_DP, trainDPList);
+		dpHashMap.put(Constant.TEST_DP, testDPList);
+		
+		return dpHashMap;
 	}
 	
 	public Matrix modifiyTarget(Matrix targetMatrix, Integer selectedClass){

@@ -25,25 +25,32 @@ public class DecisionStamp{
 	Matrix dataMatrix;
 	HashMap<Integer,List<Integer>> dataPointPerFold;
 	
+	public DecisionStamp(){
+		
+	}
+	
 	public DecisionStamp(Matrix dataMatrix){
 		this.dataMatrix = dataMatrix;
 	}
 	
 	
-	public HashMap<Integer,List<Integer>> formDifferentDataPerFold(){
+	public HashMap<Integer,List<Integer>> formDifferentDataPerFold(int nbrOfDP, int nbrOfFolds){
 		
 		dataPointPerFold = new HashMap<Integer,List<Integer>>();
 		
-		int numOfDPPerFold = Constant.NBR_OF_DP / Constant.NBR_OF_FOLDS;
-		int extraDP = Constant.NBR_OF_DP % Constant.NBR_OF_FOLDS;
+		int numOfDPPerFold = nbrOfDP / nbrOfFolds;
+		int extraDP = nbrOfDP % nbrOfFolds;
 		
-		for(int i = 0; i < Constant.NBR_OF_FOLDS; i++){
-			
-			List<Integer> numbers = IntStream.iterate(i, n -> n + 10).limit(numOfDPPerFold + ((i ==0)?extraDP:0))
+		for(int i = 0; i < nbrOfFolds; i++){
+			List<Integer> numbers = IntStream.iterate(i, n -> n + 10).limit(numOfDPPerFold)
 					.boxed().collect(Collectors.toList());
 			dataPointPerFold.put(i, numbers);
 		}
 		
+		int remainingDP = nbrOfDP - extraDP;
+		dataPointPerFold.get(nbrOfFolds-1).addAll(
+				IntStream.iterate(remainingDP, n -> n + 1).limit(extraDP).boxed().collect(Collectors.toList()));
+		dataPointPerFold.get(nbrOfFolds-1);
 		return dataPointPerFold;
 		
 	}
@@ -210,12 +217,13 @@ public class DecisionStamp{
 				
 				for(int i = 0 ; i < noOfThresholdValues;i++){
 					
+					Double thresholdValue = thresholdValues.get(i);
 					for(int k = 0 ; k < noOfCurrentNodeDataPoints ; k++){
 						
 						Integer dataPoint = currentNodeDataPoints.get(k);
 						Double trainFeatureValue = dataMatrix.get(dataPoint,featureIndex);
 						
-						if(trainFeatureValue < thresholdValues.get(i)){
+						if(trainFeatureValue < thresholdValue){
 							
 							if(leftSideDPPerThreshold.containsKey(i)){
 								//System.out.println("Left side node Threshold value Index: "+i+" 
@@ -276,6 +284,7 @@ public class DecisionStamp{
 				
 				for(int i= 0 ; i< noOfThresholdValues;i++){
 					
+					Double thresholdValue = thresholdValues.get(i);
 					for(int k = 0 ; k < noOfCurrentNodeDataPoints ; k++){
 					
 						Integer dataPoint = currentNodeDataPoints.get(k);
@@ -284,7 +293,7 @@ public class DecisionStamp{
 						//System.out.println("In side binary");
 						//System.out.println("# of different value "+ noOfThresholdValues);
 					
-						if(trainFeatureValue == thresholdValues.get(i)){
+						if(trainFeatureValue == thresholdValue){
 							if(leftSideDPPerThreshold.containsKey(i)){
 								leftSideDPPerThreshold.get(i).add(dataPoint);
 							}else{
@@ -380,17 +389,12 @@ public class DecisionStamp{
 		for(int i =0 ; i < noOfThresholdValues; i++){
 			
 			Double error = 0d;
-			
 			if(leftDataPoints.containsKey(i)){
-				
 				error += calculateError(leftDataPoints.get(i), dataDistribution, leftSideLabel, targetIndexValue);
-				
 			}
 			
 			if(rightDataPoints.containsKey(i)){
-				
 				error += calculateError(rightDataPoints.get(i), dataDistribution, rightSideLabel, targetIndexValue);
-				
 			}
 			
 			// In the binary classifier 0.9 error is actual 0.1 error if you flip the classifier label
